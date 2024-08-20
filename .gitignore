@@ -1,0 +1,5 @@
+build/
+results/
+.vscode/
+fg
+index_result.txt

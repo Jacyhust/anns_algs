@@ -1,0 +1,381 @@
+/**
+ * @file basis.h
+ *
+ * @brief A set of basic tools.
+ */
+#pragma once
+#include <string>
+#include <iostream>
+#include <time.h>
+#include <algorithm>
+#include <chrono>
+#include <map>
+#include <unordered_set>
+struct Res//the result of knns
+{
+	//dist can be:
+	//1. L2-distance
+	//2. The opposite number of inner product
+	float dist = 0.0f;
+	int id = -1;
+	Res() = default;
+	Res(int id_, float inp_) :id(id_), dist(inp_) {}
+	Res(float inp_, int id_) :id(id_), dist(inp_) {}
+	bool operator < (const Res& rhs) const {
+		return dist < rhs.dist;
+	}
+
+	constexpr bool operator > (const Res& rhs) const noexcept {
+		return dist > rhs.dist;
+	}
+
+	constexpr bool operator == (const Res& rhs) const noexcept {
+		return dist == rhs.dist;
+	}
+};
+
+namespace lsh
+{
+	class progress_display
+	{
+	public:
+		explicit progress_display(
+			int long expected_count,
+			std::ostream& os = std::cout,
+			const std::string& s1 = "\n",
+			const std::string& s2 = "",
+			const std::string& s3 = "")
+			: m_os(os), m_s1(s1), m_s2(s2), m_s3(s3)
+		{
+			restart(expected_count);
+		}
+		void restart(int long expected_count)
+		{
+			_count = _next_tic_count = _tic = 0;
+			_expected_count = expected_count;
+			m_os << m_s1 << "0%   10   20   30   40   50   60   70   80   90   100%\n"
+				<< m_s2 << "|----|----|----|----|----|----|----|----|----|----|"
+				<< std::endl
+				<< m_s3;
+			if (!_expected_count){
+				_expected_count = 1;
+			}
+		}
+		int long operator += (int long increment){
+			if ((_count += increment) >= _next_tic_count)
+			{
+				display_tic();
+			}
+			return _count;
+		}
+		int long  operator ++ (){
+			return operator += (1);
+		}
+		int long count() const{
+			return _count;
+		}
+		int long expected_count() const{
+			return _expected_count;
+		}
+	private:
+		std::ostream& m_os;
+		const std::string m_s1;
+		const std::string m_s2;
+		const std::string m_s3;
+		int long _count, _expected_count, _next_tic_count;
+		int _tic;
+		void display_tic()
+		{
+			int tics_needed = int((double(_count) / _expected_count) * 50.0);
+			do
+			{
+				m_os << '*' << std::flush;
+			} while (++_tic < tics_needed);
+			_next_tic_count = int((_tic / 50.0) * _expected_count);
+			if (_count == _expected_count)
+			{
+				if (_tic < 51) m_os << '*';
+				m_os << std::endl;
+			}
+		}
+	};
+
+	/**
+	 * A timer object measures elapsed time, and it is very similar to boost::timer.
+	 */
+	class timer
+	{
+	public:
+		timer() : time_begin(std::chrono::steady_clock::now()) {};
+		~timer() {};
+		/**
+		 * Restart the timer.
+		 */
+		void restart()
+		{
+			time_begin = std::chrono::steady_clock::now();
+		}
+		/**
+		 * Measures elapsed time.
+		 *
+		 * @return The elapsed time
+		 */
+		double elapsed()
+		{
+			std::chrono::steady_clock::time_point time_end = std::chrono::steady_clock::now();
+			return (std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_begin).count())*1e-6;// / CLOCKS_PER_SEC;
+		}
+	private:
+		std::chrono::steady_clock::time_point time_begin;
+	};
+}
+
+#include "fastL2_ip.h"
+#include "distances_simd_avx512.h"
+#include "patch_ubuntu.h"
+//extern std::atomic<size_t> _G_COST;
+
+std::atomic<size_t> _G_COST=0;
+
+inline float cal_inner_product(float* v1, float* v2, int dim)
+{
+	++_G_COST;
+#ifdef __AVX2__
+	// printf("here!\n");
+	// exit(-1);
+	return faiss::fvec_inner_product_avx512(v1, v2, dim);
+#else
+	return calIp_fast(v1, v2, dim);
+
+	float res = 0.0;
+	for (int i = 0; i < dim; ++i) {
+		res += v1[i] * v2[i];
+	}
+	return res;
+
+	return calIp_fast(v1, v2, dim);
+#endif
+	
+}
+
+inline float cal_L2sqr(float* v1, float* v2, int dim)
+{
+	++_G_COST;
+#ifdef __AVX2__
+	return (faiss::fvec_L2sqr_avx512(v1, v2, dim));
+#else
+	return calL2Sqr_fast(v1,v2,dim);
+	float res = 0.0;
+	for (int i = 0; i < dim; ++i) {
+		res += (v1[i] - v2[i]) * (v1[i] - v2[i]);
+	}
+	return res;
+#endif
+
+}
+ 
+
+template <class T>
+void clear_2d_array(T** array, int n)
+{
+	for (int i = 0; i < n; ++i) {
+		delete[] array[i];
+	}
+	delete[] array;
+}
+
+inline float calInnerProductReverse(float* v1, float* v2, int dim) {
+	return -cal_inner_product(v1, v2, dim);
+}
+
+#include <mutex>
+#include <thread>
+#include <atomic>
+#include <vector>
+// Multithreaded executor
+// The helper function copied from python_bindings/bindings.cpp (and that itself is copied from nmslib)
+// An alternative is using #pragme omp parallel for or any other C++ threading
+template<class Function>
+inline void ParallelFor(size_t start, size_t end, size_t numThreads, Function fn) {
+	if (numThreads <= 0) {
+		numThreads = std::thread::hardware_concurrency();
+	}
+
+	if (numThreads == 1) {
+		for (size_t id = start; id < end; id++) {
+			fn(id, 0);
+		}
+	}
+	else {
+		std::vector<std::thread> threads;
+		std::atomic<size_t> current(start);
+
+		// keep track of exceptions in threads
+		// https://stackoverflow.com/a/32428427/1713196
+		std::exception_ptr lastException = nullptr;
+		std::mutex lastExceptMutex;
+
+		for (size_t threadId = 0; threadId < numThreads; ++threadId) {
+			threads.push_back(std::thread([&, threadId] {
+				while (true) {
+					size_t id = current.fetch_add(1);
+
+					if (id >= end) {
+						break;
+					}
+
+					try {
+						fn(id, threadId);
+					}
+					catch (...) {
+						std::unique_lock<std::mutex> lastExcepLock(lastExceptMutex);
+						lastException = std::current_exception();
+						/*
+						 * This will work even when current is the largest value that
+						 * size_t can fit, because fetch_add returns the previous value
+						 * before the increment (what will result in overflow
+						 * and produce 0 instead of current + 1).
+						 */
+						current = end;
+						break;
+					}
+				}
+				}));
+		}
+		for (auto& thread : threads) {
+			thread.join();
+		}
+		if (lastException) {
+			std::rethrow_exception(lastException);
+		}
+	}
+}
+
+#include <mutex>
+#include <deque>
+#include <set>
+
+namespace threadPoollib
+{
+	typedef unsigned short int vl_type;
+
+	class VisitedList {
+	public:
+		vl_type curV;
+		//vl_type* mass;
+		std::unordered_set<int> mass;
+		unsigned int numelements;
+
+		VisitedList(int numelements1) {
+			curV = -1;
+			numelements = numelements1;
+			//mass = new vl_type[numelements];
+		}
+
+		void reset() {
+			curV++;
+			if (curV == 0) {
+				//memset(mass, 0, sizeof(vl_type) * numelements);
+				curV++;
+			}
+		};
+
+		~VisitedList() { 
+			//delete[] mass; 
+		}
+	};
+	///////////////////////////////////////////////////////////
+	//
+	// Class for multi-threaded pool-management of VisitedLists
+	//
+	/////////////////////////////////////////////////////////
+
+
+	class VisitedListPool {
+		std::deque<VisitedList*> pool;
+		std::mutex poolguard;
+		int numelements;
+
+	public:
+		VisitedListPool(int initmaxpools, int numelements1) {
+			numelements = numelements1;
+			for (int i = 0; i < initmaxpools; i++)
+				pool.push_front(new VisitedList(numelements));
+		}
+
+		VisitedList* getFreeVisitedList() {
+			VisitedList* rez;
+			{
+				std::unique_lock <std::mutex> lock(poolguard);
+				if (pool.size() > 0) {
+					rez = pool.front();
+					pool.pop_front();
+				}
+				else {
+					rez = new VisitedList(numelements);
+				}
+			}
+			rez->reset();
+			return rez;
+		};
+
+		void releaseVisitedList(VisitedList* vl) {
+			std::unique_lock <std::mutex> lock(poolguard);
+			pool.push_front(vl);
+		};
+
+		~VisitedListPool() {
+			while (pool.size()) {
+				VisitedList* rez = pool.front();
+				pool.pop_front();
+				delete rez;
+			}
+		};
+	};
+}
+
+template <class T>
+inline bool myFind(T* begin, T* end, const T& val)
+{
+	for (T* iter = begin; iter != end; ++iter) {
+		if (*iter == val) return true;
+	}
+	return false;
+}
+
+inline int isUnique(std::vector<Res>& vec) {
+	int len = vec.size();
+	std::set<int> s;
+	for (auto& x : vec) {
+		s.insert(x.id);
+	}
+	//std::set<T> s(vec.begin(), vec.end());
+	return len == s.size();
+}
+
+inline int isUnique(std::vector<int>& vec) {
+	int len = vec.size();
+
+	std::set<int> s(vec.begin(), vec.end());
+	return len == s.size();
+}
+
+inline int isUnique(Res* sta, Res* end) {
+	int len = end - sta;
+	std::set<int> s;
+	for (auto u = sta; u < end; ++u) {
+		s.insert(u->id);
+	}
+	return len == s.size();
+}
+
+template <class T, class U>
+int isUnique(std::map<U, T>& vec) {
+	int len = 0;
+	std::set<T> s;
+	for (auto& x : vec) {
+		s.insert(x.second);
+		++len;
+	}
+	return len == s.size();
+}
