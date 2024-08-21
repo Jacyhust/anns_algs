@@ -1,5 +1,6 @@
 build/
 results/
+indexes/
 .vscode/
 fg
 index_result.txt
