@@ -93,7 +93,7 @@ public:
         divGraph* divG = new divGraph(data, param1, "indexes/test.file", T, efC, pC, pQ);
         std::cout << "Loading FastGraph...\n";
 	    fsG = new fastGraph(divG);
-        delete divG;
+        //delete divG;
     }
 
     void search(const vector<float>& query,int* res){
