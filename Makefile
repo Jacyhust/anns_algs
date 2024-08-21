@@ -4,8 +4,8 @@ RESDIR=./results
 OBJS = $(patsubst ./test/test.cpp,$(OBJDIR)/test.o,$(SRCS))
 TARGET = fg
 CXX := g++
-CXXFLAGS := -std=c++17 -mavx512f -Ofast -lrt -DNDEBUG  -DHAVE_CXX0X -openmp -march=native -fpic -w -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=0
-# CXXFLAGS := -O3 -fopenmp -mcmodel=medium -std=c++17 -mcpu=native #-fpic -mavx512f -lrt -DHAVE_CXX0X -ftree-vectorize -ftree-vectorizer-verbose=0 -openmp -DNDEBUG 
+# CXXFLAGS := -std=c++17 -mavx512f -Ofast -lrt -DNDEBUG  -DHAVE_CXX0X -openmp -march=native -fpic -w -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=0
+CXXFLAGS := -O3 -fopenmp -mcmodel=medium -std=c++17 -mcpu=native #-fpic -mavx512f -lrt -DHAVE_CXX0X -ftree-vectorize -ftree-vectorizer-verbose=0 -openmp -DNDEBUG 
 
 all: $(TARGET)
 
@@ -15,6 +15,7 @@ $(OBJDIR)/%.o:./test/test.cpp
 
 $(TARGET):$(OBJS)
 	@test -d $(RESDIR) | mkdir -p $(RESDIR)
+	@test -d indexes | mkdir -p indexes
 	$(CXX) $(CXXFLAGS)  -o $@ $^
 
 clean:

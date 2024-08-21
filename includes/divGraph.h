@@ -12,7 +12,7 @@
 #include <thread>
 #include <atomic>
 #include <queue>
-#include <boost/math/distributions/chi_squared.hpp>
+//#include <boost/math/distributions/chi_squared.hpp>
 
 //typedef std::mutex mp_mutex;
 ////Not in C++17 format, read_lock is the same as write_lock and can not be shared
@@ -217,10 +217,13 @@ public:
 	normalizeHash();
 	double _coeff = 1.0, _coeffq = 1.0;
 	if (lowDim) {
-		boost::math::chi_squared chi(lowDim);
-		_coeff = sqrt(boost::math::quantile(chi, probC));
-		if (probQ == 1.0) _coeffq = DBL_MAX;
-		else _coeffq = sqrt(boost::math::quantile(chi, probQ));
+		// boost::math::chi_squared chi(lowDim);
+		// _coeff = sqrt(boost::math::quantile(chi, probC));
+		// if (probQ == 1.0) _coeffq = DBL_MAX;
+		// else _coeffq = sqrt(boost::math::quantile(chi, probQ));
+
+		_coeff=5.09798;
+		_coeffq=5.37302;
 	}
 	
 #ifdef USE_SQRDIST
@@ -319,9 +322,12 @@ public:
 
 	double _coeffq = 1.0;
 	if (lowDim) {
-		boost::math::chi_squared chi(lowDim);
-		if (probQ == 1.0) _coeffq = DBL_MAX;
-		else _coeffq = sqrt(boost::math::quantile(chi, probQ));
+		// boost::math::chi_squared chi(lowDim);
+		// if (probQ == 1.0) _coeffq = DBL_MAX;
+		// else _coeffq = sqrt(boost::math::quantile(chi, probQ));
+
+		//_coeff=5.09798;
+		_coeffq=5.37302;
 	}
 #ifdef USE_SQRDIST
 	_coeffq = _coeffq * _coeffq;
@@ -798,7 +804,7 @@ void divGraph::oneByOneInsert()
 	lsh::progress_display pd(N - 1);
 
 	// Add data to index
-    ParallelFor(1, N, 1, [&](size_t i, size_t threadId) {
+    ParallelFor(1, N, 96, [&](size_t i, size_t threadId) {
         insertLSHRefine(idx[i]);
 		++pd;
     });

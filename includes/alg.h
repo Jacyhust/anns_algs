@@ -97,7 +97,7 @@ inline resOutput Alg0_maria(mariaVx& maria, float c_, int m_, int k_, int L_, in
 #if defined(unix) || defined(__unix__)
 //std::string data_fold = "/home/xizhao/dataset/", index_fold = " ";
 std::string data_fold = "/home/xizhao/dataset/", index_fold = " ";
-std::string data_fold1 = data_fold, data_fold2 = data_fold+("MIPS/");
+std::string data_fold1 = data_fold, data_fold2 = data_fold+("ANN/");
 #else
 std::string data_fold = "E:/Dataset_for_c/", index_fold = " ";
 std::string data_fold1 = data_fold;
