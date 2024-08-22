@@ -8,7 +8,6 @@
 using namespace std;
 
 
-
 float l2_distance(const float* a, const float* b, int d) {
     float dist = 0.0;
     for (int i = 0; i < d; ++i) {

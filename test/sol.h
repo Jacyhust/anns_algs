@@ -112,3 +112,28 @@ public:
         }
     }
 };
+
+class Solution1 {
+    //hcnngLite::hcnng<calInnerProductReverse>* hcnng=nullptr;
+    fastGraph* fsG=nullptr;
+public:
+    void build(int d, const vector<float>& base){
+        
+    }
+
+    void search(const vector<float>& query,int* res){
+        int dim=fsG->dim;
+        //int nq=query.size()/dim;
+        int k_=10;
+        int c_=1.0f;
+        float m_=1.0f;
+        float* pos=const_cast<float*>(query.data());
+
+        queryN q(0 , c_, k_, pos,dim, m_);
+        fsG->knn(&q);
+
+        for (int j = 0; j < 10; j++) {
+            res[j]=q.res[j].id;
+        }
+    }
+};

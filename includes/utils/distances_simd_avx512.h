@@ -1,16 +1,18 @@
 
 // -*- c++ -*-
 
+
+//#include "distances_simd_avx512.h"
+
+#ifdef __AVX2__
+
+
 #include <stddef.h>
 #include <stdint.h>
 #include <cstdio>
 #include <cassert>
 #include <immintrin.h>
 #include <string>
-
-//#include "distances_simd_avx512.h"
-
-#ifdef __AVX2__
 namespace faiss {
 
 // reads 0 <= d < 4 floats as __m128
