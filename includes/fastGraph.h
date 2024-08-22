@@ -241,25 +241,17 @@ struct fastGraph
     void searchLSHQuery(queryN * q, std::priority_queue<Res>& candTable, std::vector<bool>& flag_)
     {
         q->hashval = myhash->calHash(q->queryPoint);
-        //std::vector<bool> flag_(N, false);
-        //std::vector<float> visitedDists(N);
-        
-        //std::priority_queue<Res> candTable;
-        //Res res_pair;
 
         q->UB = (int)N / 10;
         int lshUB = N / 200;
         lshUB = 4 * L * log(N) + ef;
         int step = 1;
-        //if(_lsh_UB>0) lshUB=_lsh_UB;
-        //std::vector<int> numAccess(L);
         std::vector<hashPair*> lpos(L), rpos(L), qpos(L);
         std::priority_queue<posInfo> lEntries, rEntries;
         std::vector<zint> keys(L);
         for (int j = 0; j < L; j++) {
             keys[j] = getZ(q->hashval + j * K);
             qpos[j] = std::lower_bound(hashTables[j], hashTables[j] + N, hashPair(keys[j], -1));
-            //qpos[j] = hashTables[j].lower_bound(keys[j]);
             if (qpos[j] != hashTables[j]) {
                 lpos[j] = qpos[j];
                 --lpos[j];
@@ -334,18 +326,6 @@ struct fastGraph
                     if (++rpos[t.id] == hashTables[t.id] + N) {
                         break;
                     }
-
-                    //res_pair.id = rpos[t.id]->second;
-                    //if (flag_[res_pair.id] == 'U')
-                    //{
-                    //    res_pair.dist = cal_dist(q->queryPoint, q->myData[res_pair.id], dim);
-                    //    visitedDists[res_pair.id] = res_pair.dist;
-                    //    candTable.push(res_pair);
-                    //    flag_[res_pair.id] = 'T';
-                    //}
-                    //if (++rpos[t.id] == hashTables[t.id].end()) {
-                    //    break;
-                    //}
                 }
                 if (rpos[t.id] != hashTables[t.id]+N) {
 #ifdef USE_LCCP
@@ -378,39 +358,21 @@ struct fastGraph
         searchLSHQuery(q, candTable,flag_);
         q->timeHash = timer.elapsed();
 
-        //std::priority_queue<std::pair<dist_t, labeltype >> result;
 #ifdef USE_SSE
         _mm_prefetch((char*)(q->queryPoint), _MM_HINT_T0);
 #endif
 
-        //int currObj = 0;
-        //int ep_id = 0;
-        //dist_t curdist = cal_dist(q->queryPoint, dataset[ep_id], dim);
-        //q->cost++;
-        //VisitedList* vl = visited_list_pool_->getFreeVisitedList();
-        //auto visited_array = vl->mass;
-        //vl_type visited_array_tag = vl->curV;
-
         std::priority_queue<std::pair<dist_t, tableint>> top_candidates;
         std::priority_queue<std::pair<dist_t, tableint>> candidate_set;
-        //std::priority_queue<std::pair<dist_t, tableint>, std::vector<std::pair<dist_t, tableint>>, CompareByFirst> top_candidates;
-        //std::priority_queue<std::pair<dist_t, tableint>, std::vector<std::pair<dist_t, tableint>>, CompareByFirst> candidate_set;
 
         while (!candTable.empty()) {
             auto u = candTable.top();
             top_candidates.emplace(u.dist, u.id);
             candidate_set.emplace(-u.dist, u.id);
-            //pqEntries.push(u);
-            //q->resHeap.push(u);
             candTable.pop();
         }
 
         dist_t lowerBound = top_candidates.top().first;
-        //top_candidates.emplace(dist, ep_id);
-        //candidate_set.emplace(-dist, ep_id);
-
-        ////visited_array[ep_id] = visited_array_tag;
-        //visited_array.emplace(ep_id);
 
         while (!candidate_set.empty()) {
 
@@ -424,12 +386,8 @@ struct fastGraph
             tableint current_node_id = current_node_pair.second;
             int* data = (int*)(links + current_node_id * size_data_per_element_);
             size_t size = *data;
-            //bool cur_node_deleted = isMarkedDeleted(current_node_id);
 
 #ifdef USE_SSE
-           //_mm_prefetch((char*)(visited_array + *(data + 1)), _MM_HINT_T0);
-           //_mm_prefetch((char*)(visited_array + *(data + 1) + 64), _MM_HINT_T0);
-           //_mm_prefetch(links + (*(data + 1)) * size_data_per_element_ + offsetData_, _MM_HINT_T0);
             _mm_prefetch((char*)(dataset[data[1]]), _MM_HINT_T0);
             _mm_prefetch((char*)(data + 1), _MM_HINT_T0);
 #endif
@@ -438,12 +396,8 @@ struct fastGraph
                 int candidate_id = *(data + j);
                 //                    if (candidate_id == 0) continue;
 #ifdef USE_SSE
-               //_mm_prefetch((char*)(visited_array + *(data + j + 1)), _MM_HINT_T0);
-               //_mm_prefetch((char*)(dataset[*(data + j + 1)]), _MM_HINT_T0);
 #endif
                 if (!flag_[candidate_id]) {
-
-                    //visited_array[candidate_id] = visited_array_tag;
                     flag_[candidate_id] = true;
 
                     if (0 || cal_L2sqr(q->hashval, hashval[candidate_id], lowDim) * myhash->coeffq < lowerBound) {
@@ -472,8 +426,6 @@ struct fastGraph
                 }
             }
         }
-
-        //visited_list_pool_->releaseVisitedList(vl);
 
         while (top_candidates.size() > q->k) {
             top_candidates.pop();

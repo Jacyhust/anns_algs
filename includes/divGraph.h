@@ -710,59 +710,6 @@ void divGraph::chooseNN_div(Res* arr, int& size_res, Res new_res)
 	else {
 		arr[size_res++] = new_res;
 		chooseNN_div(arr, size_res);
-
-		/*if (arr[0] > new_res) {
-			arr[size_res] = arr[size_res - 1];
-			arr[size_res - 1] = arr[0];
-			arr[0] = arr[size_res];
-
-			auto idx = std::upper_bound(arr, arr + size_res, new_res) - arr;
-			bool flag = true;
-			for (int j = 0; j < idx; ++j) {
-				++compCostConstruction;
-				if (cal_dist(myData[new_res.id], myData[arr[j].id], dim) < new_res.dist) {
-					flag = false;
-					break;
-				}
-			}
-			if (flag) {
-				memmove(arr + idx + 1, arr + idx, (size_res - idx + 1) * sizeof(Res));
-				arr[idx] = new_res;
-				size_res++;
-				int choose_num = idx + 1;
-				std::sort(arr, arr + size_res);
-				std::priority_queue<Res, std::vector<Res>, std::greater<Res>> res;
-				for (int i = idx + 1; i < size_res; ++i) {
-					if (choose_num >= maxT) break;
-					auto& curRes = arr[i];
-					++compCostConstruction;
-					if (cal_dist(myData[curRes.id], myData[new_res.id], dim) < curRes.dist) {
-						flag = false;
-						break;
-					}
-					if (flag) {
-						if (choose_num < i) {
-							Res temp = arr[i];
-							arr[i] = arr[choose_num];
-							arr[choose_num] = temp;
-						}
-						choose_num++;
-					}
-					else flag = true;
-				}
-
-				size_res = choose_num;
-
-				if (size_res < T) {
-					size_res = T;
-					std::sort(arr, arr + size_res);
-				}
-			}
-
-			arr[size_res] = arr[size_res - 1];
-			arr[size_res - 1] = arr[0];
-			arr[0] = arr[size_res];
-		}*/
 	}
 	
 }
@@ -808,21 +755,6 @@ void divGraph::oneByOneInsert()
         insertLSHRefine(idx[i]);
 		++pd;
     });
-
-// #pragma omp parallel for //num_threads(32) 
-// 	for (int i = 1; i < N; i++) {
-// 		insertLSHRefine(idx[i]);
-// 		++pd;
-// 	}
-	//std::cout << "count: " << pd.count() << std::endl;
-
-//#pragma omp parallel for
-//	for (int i = N - 1; i >= 0; i--) {
-//		insertHNSW(i);
-//		++pd;
-//	}
-
-	//refine();
 }
 
 void divGraph::refine()

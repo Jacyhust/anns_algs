@@ -35,7 +35,7 @@ typedef struct Tuple
 	}
 }Tuple;
 
-bool comp(const Tuple& a, const Tuple& b)
+inline bool comp(const Tuple& a, const Tuple& b)
 {
 	return a.inp > b.inp;
 }
@@ -253,8 +253,7 @@ private:
 			float M = distpairs[j].dist / ratio;
 			cnt = 0;
 			bucket.clear();
-			while (j < N_)
-			{
+			while (j < N_){
 				if ((distpairs[j].dist > M || cnt >= MAXSIZE)) {
 					break;
 				}

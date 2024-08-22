@@ -21,7 +21,7 @@
 #include "./utils/patch_ubuntu.h"
 #include "./utils/performance.h"
 
-extern std::atomic<size_t> _G_COST;
+//extern std::atomic<size_t> _G_COST;
 
 struct resOutput
 {
@@ -57,7 +57,7 @@ inline resOutput Alg0_maria(mariaVx& maria, float c_, int m_, int k_, int L_, in
 	lsh::timer timer1;
 	int t = 1;
 
-	size_t cost1 = _G_COST;
+	//size_t cost1 = _G_COST;
 
 	lsh::progress_display pd(Qnum*t);
 	for (int j = 0; j < Qnum*t; j++)
@@ -78,7 +78,7 @@ inline resOutput Alg0_maria(mariaVx& maria, float c_, int m_, int k_, int L_, in
 	localtime_s(ltm, &now);
 
 
-	cost1 = _G_COST - cost1;
+	//cost1 = _G_COST - cost1;
 
 	resOutput res;
 	res.algName = maria.alg_name;
@@ -88,7 +88,7 @@ inline resOutput Alg0_maria(mariaVx& maria, float c_, int m_, int k_, int L_, in
 	res.time = mean_time * 1000;
 	res.recall = ((float)perform.NN_num) / (perform.num * k_);
 	res.ratio = ((float)perform.ratio) / (perform.res_num);
-	res.cost = ((float)cost1) / ((long long)perform.num);
+	res.cost = ((float)0) / ((long long)perform.num);
 	res.kRatio = perform.kRatio / perform.num;
 	//delete[] ltm;
 	return res;

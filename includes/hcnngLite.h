@@ -12,7 +12,7 @@
 #include <unordered_set>
 #include <set>
 
-extern std::atomic<size_t> _G_COST;
+//extern std::atomic<size_t> _G_COST;
 
 namespace hcnngLite {
 	using pii = std::pair<int, int>;
@@ -124,12 +124,12 @@ namespace hcnngLite {
 			lsh::timer timer;
 
 			if (rebuilt || !findIndex(file_graph)) {
-				_G_COST = 0;
+				//_G_COST = 0;
 				buildGraph();
 				indexing_time = timer.elapsed();
-				indexing_cost = (float)_G_COST / data.N;
+				//indexing_cost = (float)_G_COST / data.N;
 				write_graph(file_graph);
-				_G_COST = 0;
+				//_G_COST = 0;
 
 				printf("%s:\nIndexingTime=%f s, cc=%f.\n\n", datasetName.c_str(), indexing_time, indexing_cost);
 				FILE* fp = nullptr;
@@ -199,7 +199,7 @@ namespace hcnngLite {
 					partis.emplace_back(i, x);
 				}
 			}
-			std::cout << "LC cost: " << _G_COST << std::endl;
+			//std::cout << "LC cost: " << _G_COST << std::endl;
 			printf("\n\nBuilding...\n");
 			pd = new lsh::progress_display((size_t)N * (size_t)num_cl);
 #pragma omp parallel for

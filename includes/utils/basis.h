@@ -150,11 +150,15 @@ namespace lsh
 #include "patch_ubuntu.h"
 //extern std::atomic<size_t> _G_COST;
 
-std::atomic<size_t> _G_COST=0;
+
+
+// struct comp_cost{
+// 	static std::atomic<size_t> _G_COST;
+// };
 
 inline float cal_inner_product(float* v1, float* v2, int dim)
 {
-	++_G_COST;
+	//++_G_COST;
 #ifdef __AVX2__
 	// printf("here!\n");
 	// exit(-1);
@@ -175,7 +179,7 @@ inline float cal_inner_product(float* v1, float* v2, int dim)
 
 inline float cal_L2sqr(float* v1, float* v2, int dim)
 {
-	++_G_COST;
+	//++_G_COST;
 #ifdef __AVX2__
 	return (faiss::fvec_L2sqr_avx512(v1, v2, dim));
 #else
