@@ -993,9 +993,6 @@ void divGraph::bestFirstSearchInGraph(queryN * q, std::string & stateFlags, entr
 		q->maxHop = q->maxHop > hop ? q->maxHop : hop;
 		Res* nns = linkLists[u.id]->neighbors;
 #ifdef USE_SSE
-		//_mm_prefetch((char*)&(stateFlags[u.id]), _MM_HINT_T0);
-		//_mm_prefetch((char*)(&(stateFlags[u.id]) + 64), _MM_HINT_T0);
-		//_mm_prefetch(links + (*(data + 1)) * size_data_per_element_ + offsetData_, _MM_HINT_T0);
 		_mm_prefetch((char*)(myData[nns[0].id]), _MM_HINT_T0);
 		_mm_prefetch((char*)(myData[nns[1].id]), _MM_HINT_T0);
 #endif
@@ -1107,18 +1104,6 @@ void divGraph::showInfo(Preprocess* prep)
 		(float)compCostConstruction / N, (float)pruningConstruction / compCostConstruction);
 	if (fp) fprintf(fp, "%s\nT=%d,L=%d,K=%d\ndist=%f, cnt=%f, unique=%d, std=%f, Recall=%f\ncc=%f, pruning=%f, IndexingTime=%f s.\n\n", file.c_str(), T, L, K, dist_total / cnt1, (float)cnt / N1, (int)f, sigma, (float)rec / cnt1,
 		(float)compCostConstruction / N, (float)pruningConstruction / compCostConstruction, indexingTime);
-
-	//if (compCostConstruction == 0) {
-	//	printf("dist=%f, cnt=%f, unique=%d, Dcnt=%f, Recall=%f\n\n", dist_total / cnt1, (float)cnt / N1, (int)f, sigma, (float)rec / cnt1);
-	//	if (fp) fprintf(fp, "dist=%f, cnt=%f, unique=%d, Dcnt=%f, Recall=%f\ncc=%f, pruning=%f, IndexingTime=%f s.\n\n", dist_total / cnt1, (float)cnt / N1, (int)f, sigma, (float)rec / cnt1,
-	//		(float)compCostConstruction / N, (float)pruningConstruction / compCostConstruction, indexingTime);
-	//}
-	//else {
-	//	printf("dist=%f, cnt=%f, unique=%d, Dcnt=%f, Recall=%f\ncc=%f, pruning=%f\n\n", dist_total / cnt1, (float)cnt / N1, (int)f, sigma, (float)rec / cnt1,
-	//		(float)compCostConstruction / N, (float)pruningConstruction / compCostConstruction);
-	//	if (fp) fprintf(fp, "dist=%f, cnt=%f, unique=%d, Dcnt=%f, Recall=%f\ncc=%f, pruning=%f, IndexingTime=%f s.\n\n", dist_total / cnt1, (float)cnt / N1, (int)f, sigma, (float)rec / cnt1,
-	//		(float)compCostConstruction / N, (float)pruningConstruction / compCostConstruction, indexingTime);
-	//}
 }
 
 static int connectivity(std::vector<std::vector<int>>& us)
