@@ -99,6 +99,7 @@ public:
     }
 
     void search(const vector<float>& query,int* res){
+        std::cerr<<"CheckPt4!\n";
         int dim=fsG->dim;
         //int nq=query.size()/dim;
         int k_=10;
