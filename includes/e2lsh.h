@@ -400,6 +400,8 @@ public:
 		std::cout << RED << "Old W=    " << oldW
 			<< "\nNew W=    " << W
 			<< "\nIncrease  " << r << "times.\n" << RESET;
+
+		delete[] ranges;
 	}
 
 	std::vector< std::multimap<zint, int> > hashTables;

@@ -177,6 +177,8 @@ private:
 			insertLSHRefine(idx[i]);
 			++pd;
 		});
+
+		delete[] idx;
 	}
 
 	void refine(){
@@ -1134,5 +1136,9 @@ public:
 	//showInfo(prep);
 }
 
-	~divGraph(){}
+	~divGraph(){
+		for (int i = 0; i < N; ++i) {
+			delete linkLists[i];
+		}
+	}
 };

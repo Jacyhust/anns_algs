@@ -4,7 +4,9 @@
 #include <algorithm>
 #include <cmath>
 #include "sol.h"
-
+#if defined _MSC_VER
+#include "vld.h"
+#endif
 using namespace std;
 
 
@@ -44,7 +46,7 @@ float compute_recall(const vector<int>& search_result, const vector<int>& true_r
 }
 
 int main() {
-    int num_vectors = 10000;
+    int num_vectors = 1000;
     int dimension = 128;
 
     vector<float> base;
