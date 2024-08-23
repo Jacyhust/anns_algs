@@ -57,6 +57,7 @@ using namespace std;
 class Solution {
     //hcnngLite::hcnng<calInnerProductReverse>* hcnng=nullptr;
     fastGraph* fsG=nullptr;
+    Data data;
 public:
     void build(int d, const vector<float>& base){
         float c = 1.5;
@@ -73,7 +74,7 @@ public:
         double pC = 0.95, pQ = 0.9;
 
         std::string dataset="test";
-        Data data;
+        
 
         data.N=base.size()/d;
         data.dim=d;
@@ -91,9 +92,10 @@ public:
 	    param1.W = 0.3f;
         std::cout << "Build!\n";
         divGraph* divG = new divGraph(data, param1, "indexes/test.file", T, efC, pC, pQ);
+        delete divG->visited_list_pool_;
         std::cout << "Loading FastGraph...\n";
 	    fsG = new fastGraph(divG);
-        //delete divG;
+        delete divG;
     }
 
     void search(const vector<float>& query,int* res){
@@ -113,27 +115,27 @@ public:
     }
 };
 
-class Solution1 {
-    //hcnngLite::hcnng<calInnerProductReverse>* hcnng=nullptr;
-    fastGraph* fsG=nullptr;
-public:
-    void build(int d, const vector<float>& base){
+// class Solution1 {
+//     //hcnngLite::hcnng<calInnerProductReverse>* hcnng=nullptr;
+//     fastGraph* fsG=nullptr;
+// public:
+//     void build(int d, const vector<float>& base){
         
-    }
+//     }
 
-    void search(const vector<float>& query,int* res){
-        int dim=fsG->dim;
-        //int nq=query.size()/dim;
-        int k_=10;
-        int c_=1.0f;
-        float m_=1.0f;
-        float* pos=const_cast<float*>(query.data());
+//     void search(const vector<float>& query,int* res){
+//         int dim=fsG->dim;
+//         //int nq=query.size()/dim;
+//         int k_=10;
+//         int c_=1.0f;
+//         float m_=1.0f;
+//         float* pos=const_cast<float*>(query.data());
 
-        queryN q(0 , c_, k_, pos,dim, m_);
-        fsG->knn(&q);
+//         queryN q(0 , c_, k_, pos,dim, m_);
+//         fsG->knn(&q);
 
-        for (int j = 0; j < 10; j++) {
-            res[j]=q.res[j].id;
-        }
-    }
-};
+//         for (int j = 0; j < 10; j++) {
+//             res[j]=q.res[j].id;
+//         }
+//     }
+// };

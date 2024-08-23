@@ -1,9 +1,11 @@
- #pragma once
- #include "divGraph.h"
+#pragma once
+#include "divGraph.h"
+#include <cstdio>
+#include <cstdlib>
 
- using dist_t = float;
- using labeltype = int;
- using tableint = int;
+using dist_t = float;
+using labeltype = int;
+using tableint = int;
 
 //extern int _lsh_UB;
 
@@ -36,10 +38,13 @@ struct fastGraph
  	size_t maxT = 0;
  	size_t size_data_per_element_;
  	float** dataset = nullptr;
+    HashParam hashPar;
+    float W=0.0f;
     float** hashval = nullptr;
     hashPair** hashTables = nullptr;
     float** myData;
-    divGraph* myhash = nullptr;//for computing q's hash values 
+    float coeffq;
+    //divGraph* myhash = nullptr;//for computing q's hash values 
  	//size_t max_elements_;
  	const size_t sint = sizeof(int);
  	threadPoollib::VisitedListPool* visited_list_pool_ = nullptr;
@@ -82,9 +87,12 @@ struct fastGraph
         L = divG->L;
         S = divG->S;
         lowDim = divG->lowDim;
-        myhash = divG;
+        //myhash = divG;
         hashval = divG->hashval;
-        u = myhash->u;
+        hashPar=divG->hashPar;
+        coeffq=divG->coeffq;
+        W=divG->W;
+        u = divG->u;
         hashTables = new hashPair * [L];
         for (int i = 0; i < L; ++i) {
             hashTables[i] = new hashPair[N];
@@ -238,9 +246,17 @@ struct fastGraph
 
     }
 
+    float* calHash(float* point){
+		float* res = new float[S];
+		for (int i = 0; i < S; i++) {
+			res[i] = (cal_inner_product(point, hashPar.rndAs[i], dim) + hashPar.rndBs[i]) / W;
+		}
+		return res;
+	}
+
     void searchLSHQuery(queryN * q, std::priority_queue<Res>& candTable, std::vector<bool>& flag_)
     {
-        q->hashval = myhash->calHash(q->queryPoint);
+        q->hashval = calHash(q->queryPoint);
 
         q->UB = (int)N / 10;
         int lshUB = N / 200;
@@ -400,7 +416,7 @@ struct fastGraph
                 if (!flag_[candidate_id]) {
                     flag_[candidate_id] = true;
 
-                    if (0 || cal_L2sqr(q->hashval, hashval[candidate_id], lowDim) * myhash->coeffq < lowerBound) {
+                    if (0 || cal_L2sqr(q->hashval, hashval[candidate_id], lowDim) * coeffq < lowerBound) {
                         float* currObj1 = dataset[*(data + j)];
                         dist_t dist = cal_L2sqr(q->queryPoint, currObj1, dim);
                         q->cost++;
@@ -512,7 +528,7 @@ struct fastGraph
                     //visited_array[candidate_id] = visited_array_tag;
                     flag_[candidate_id] = true;
 
-                    if (0 || cal_L2sqr(q->hashval, hashval[candidate_id], lowDim) * myhash->coeffq < lowerBound) {
+                    if (0 || cal_L2sqr(q->hashval, hashval[candidate_id], lowDim) * coeffq < lowerBound) {
                         float* currObj1 = dataset[*(data + j)];
                         dist_t dist = cal_L2sqr(q->queryPoint, currObj1, dim);
                         q->cost++;

@@ -44,7 +44,7 @@ float compute_recall(const vector<int>& search_result, const vector<int>& true_r
 }
 
 int main() {
-    int num_vectors = 1000000;
+    int num_vectors = 1000001;
     int dimension = 1024;
 
     vector<float> base;

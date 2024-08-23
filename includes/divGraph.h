@@ -243,10 +243,10 @@ public:
 	std::cout << "CONSTRUCTING TIME: " << timer.elapsed() << "s." << std::endl << std::endl;
 	indexingTime = timer.elapsed();
 
-	std::cout << "SAVING GRAPH..." << std::endl;
-	timer.restart();
-	save(file);
-	std::cout << "SAVING TIME: " << timer.elapsed() << "s." << std::endl << std::endl;
+	// std::cout << "SAVING GRAPH..." << std::endl;
+	// timer.restart();
+	// save(file);
+	// std::cout << "SAVING TIME: " << timer.elapsed() << "s." << std::endl << std::endl;
 
 	//showInfo(&prep_);
 }
