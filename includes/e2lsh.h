@@ -127,7 +127,7 @@ public:
 	//bool isBuilt(const std::string& file);
 	//virtual void save(const std::string& file) override {}
 	~hashBase(){
-		clear_2d_array(hashPar.rndAs, S);
+		//clear_2d_array(hashPar.rndAs, S);
 	}
 };
 

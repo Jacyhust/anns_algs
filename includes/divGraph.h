@@ -364,6 +364,7 @@ public:
 	//showInfo(prep);
 }
 
+	~divGraph(){}
 };
 
 #include <queue>

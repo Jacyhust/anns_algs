@@ -22,4 +22,4 @@ $(TARGET):$(OBJS)
 	$(CXX) $(CXXFLAGS)  -o $@ $^
 
 clean:
-	rm -rf $(TARGET) $(OBJDIR)
+	rm -rf $(TARGET) $(OBJDIR) tb

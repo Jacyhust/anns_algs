@@ -73,18 +73,25 @@ struct fastGraph
  	}
 
  	void loadLite(divGraph* divG){
+        std::cerr<<"CheckPt1!\n";
+        std::cerr<<N * size_data_per_element_<<"\n";
  		links = (char*)malloc(N * size_data_per_element_);
         if(!links){
             std::cerr<<"Empty pointer!\n";
             exit(-1);
         }
  		for (size_t i = 0; i < N; ++i) {
+            //std::cerr<<"CheckPt2!\n";
  			char* begin = links + i * size_data_per_element_;
  			auto& nns = divG->linkLists[i];
  			memcpy(begin, &(nns->out), sint);
+            if((nns->out)>maxT){
+                std::cerr<<nns->out<<" out\n";
+            }
  			begin += sint;
- 			for (int i = 0; i < nns->out; ++i) {
- 				memcpy(begin + i * sint, &(nns->neighbors[i].id), sint);
+ 			for (int j = 0; j < nns->out; ++j) {
+                //std::cerr<<"CheckPt3!\n";
+ 				memcpy(begin + j * sint, &(nns->neighbors[j].id), sint);
  			}
  		}
         K = divG->K;
@@ -98,15 +105,20 @@ struct fastGraph
         W=divG->W;
         u = divG->u;
         hashTables = new hashPair * [L];
+        std::cerr<<"CheckPt2!\n";
         for (int i = 0; i < L; ++i) {
             hashTables[i] = new hashPair[N];
             int cnt = 0;
             auto pt = divG->hashTables[i].begin();
+            if(divG->hashTables[i].size()>N){
+                std::cerr<<divG->hashTables[i].size()<<" size\n";
+            }
             while (pt != divG->hashTables[i].end()) {
                 hashTables[i][cnt++] = hashPair(pt->first, pt->second);
                 pt++;
             }
         }
+        std::cerr<<"CheckPt3!\n";
  	}
 
  	void knnHNSW1(queryN* q){
