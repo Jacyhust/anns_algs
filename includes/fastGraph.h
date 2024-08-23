@@ -74,6 +74,10 @@ struct fastGraph
 
  	void loadLite(divGraph* divG){
  		links = (char*)malloc(N * size_data_per_element_);
+        if(!links){
+            std::cerr<<"Empty pointer!\n";
+            exit(-1);
+        }
  		for (size_t i = 0; i < N; ++i) {
  			char* begin = links + i * size_data_per_element_;
  			auto& nns = divG->linkLists[i];
