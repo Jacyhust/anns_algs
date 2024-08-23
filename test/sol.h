@@ -114,6 +114,11 @@ public:
             res[j]=q.res[j].id;
         }
     }
+
+    ~Solution(){
+        delete [] data.val;
+        delete fsG;
+    }
 };
 
 // class Solution1 {

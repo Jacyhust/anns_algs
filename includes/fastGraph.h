@@ -2,7 +2,9 @@
 #include "divGraph.h"
 #include <cstdio>
 #include <cstdlib>
-
+#if defined _MSC_VER
+#include <intrin.h>
+#endif
 using dist_t = float;
 using labeltype = int;
 using tableint = int;
@@ -238,10 +240,7 @@ struct fastGraph
         return res;
     }
 
-#if defined _MSC_VER
-#include <intrin.h>
-#endif
-#include "divGraph.h"
+
 
     int getLLCP(zint k1, zint k2)
     {
@@ -270,7 +269,7 @@ struct fastGraph
 		return res;
 	}
 
-    void searchLSHQuery(queryN * q, std::priority_queue<Res>& candTable, std::vector<bool>& flag_)
+    void searchLSHQuery(queryN* q, std::priority_queue<Res>& candTable, std::vector<bool>& flag_)
     {
         q->hashval = calHash(q->queryPoint);
 
@@ -605,5 +604,15 @@ struct fastGraph
         }
 
         q->time_total = timer.elapsed();
+    }
+
+    ~fastGraph(){
+        delete visited_list_pool_;
+        delete links;
+        clear_2d_array(hashval,N);
+        clear_2d_array(hashPar.rndAs,S);
+        delete [] hashPar.rndBs;
+        clear_2d_array(hashTables,L);
+
     }
  };
