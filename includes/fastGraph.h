@@ -608,7 +608,8 @@ struct fastGraph
 
     ~fastGraph(){
         delete visited_list_pool_;
-        delete links;
+        //delete links;
+        free(links);
         clear_2d_array(hashval,N);
         clear_2d_array(hashPar.rndAs,S);
         delete [] hashPar.rndBs;
