@@ -471,6 +471,99 @@ struct fastGraph
         q->time_total = timer.elapsed();
     }
 
+    void knnParalle(queryN* q) {
+        lsh::timer timer;
+        
+        //entryHeap pqEntries;
+        std::priority_queue<Res> candTable;
+        std::vector<bool> flag_(N, false);
+
+        timer.restart();
+        searchLSHQuery(q, candTable,flag_);
+        q->timeHash = timer.elapsed();
+
+#ifdef USE_SSE
+        _mm_prefetch((char*)(q->queryPoint), _MM_HINT_T0);
+#endif
+
+        std::priority_queue<std::pair<dist_t, tableint>> top_candidates;
+        std::priority_queue<std::pair<dist_t, tableint>> candidate_set;
+
+        while (!candTable.empty()) {
+            auto u = candTable.top();
+            top_candidates.emplace(u.dist, u.id);
+            candidate_set.emplace(-u.dist, u.id);
+            candTable.pop();
+        }
+
+        dist_t lowerBound = top_candidates.top().first;
+
+        while (!candidate_set.empty()) {
+
+            std::pair<dist_t, tableint> current_node_pair = candidate_set.top();
+
+            if ((-current_node_pair.first) > lowerBound) {
+                break;
+            }
+            candidate_set.pop();
+
+            tableint current_node_id = current_node_pair.second;
+            int* data = (int*)(links + current_node_id * size_data_per_element_);
+            size_t size = *data;
+
+#ifdef USE_SSE
+            _mm_prefetch((char*)(dataset[data[1]]), _MM_HINT_T0);
+            _mm_prefetch((char*)(data + 1), _MM_HINT_T0);
+#endif
+
+            for (size_t j = 1; j <= size; j++) {
+                int candidate_id = *(data + j);
+                //                    if (candidate_id == 0) continue;
+#ifdef USE_SSE
+#endif
+                if (!flag_[candidate_id]) {
+                    flag_[candidate_id] = true;
+
+                    if (0 || cal_L2sqr(q->hashval, hashval[candidate_id], lowDim) * coeffq < lowerBound) {
+                        float* currObj1 = dataset[*(data + j)];
+                        dist_t dist = cal_L2sqr(q->queryPoint, currObj1, dim);
+                        q->cost++;
+                        if (top_candidates.size() < ef || lowerBound > dist) {
+                            candidate_set.emplace(-dist, candidate_id);
+#ifdef USE_SSE
+                            _mm_prefetch((char*)(dataset[candidate_set.top().second]), _MM_HINT_T0);
+#endif
+
+                            top_candidates.emplace(dist, candidate_id);
+                            if (top_candidates.size() > ef)
+                                top_candidates.pop();
+
+                            if (!top_candidates.empty())
+                                lowerBound = top_candidates.top().first;
+                        }
+                    }
+                    else {
+                        q->prunings++;
+                    }
+
+                    
+                }
+            }
+        }
+
+        while (top_candidates.size() > q->k) {
+            top_candidates.pop();
+        }
+        q->res.resize(q->k);
+        for (int i = q->k - 1; i > -1; --i) {
+            std::pair<dist_t, tableint> rez = top_candidates.top();
+            q->res[i] = Res(rez.first, rez.second);
+            top_candidates.pop();
+        }
+
+        q->time_total = timer.elapsed();
+    }
+
     void knnHNSW(queryN* q) {
         lsh::timer timer;
 
