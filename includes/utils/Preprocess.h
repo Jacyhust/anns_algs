@@ -474,7 +474,7 @@ public:
 	//void search();
 
 	~queryN() { 
-		delete hashval; 
+		delete [] hashval; 
 		//delete queryPoint;
 	}
 };

@@ -14,7 +14,7 @@ extern std::string data_fold1, data_fold2;
 
 int main(int argc, char const* argv[])
 {
-	std::string dataset = "mnist";
+	std::string dataset = "gist";
 	if (argc > 1) {
 		dataset = argv[1];
 	}
