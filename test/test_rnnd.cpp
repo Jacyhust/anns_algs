@@ -2,7 +2,7 @@
 #include <memory>
 #include <chrono>
 
-#include "RNNDescent.h"
+#include "../includes/RNNDescent.h"
 #include "utils/io.hpp"
 
 #include "sol.h"
