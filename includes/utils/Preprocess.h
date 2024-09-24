@@ -93,19 +93,30 @@ public:
 		queries.N = 200;
 		queries.dim = data.dim;
 
+
 		queries.val = new float* [queries.N];
 		data.val = new float* [data.N];
 
+		//data.offset=data.dim+1;
+		data.base=new float[data.N*data.dim];
+		queries.base=new float[queries.N*queries.dim];
+
 		for (int i = 0; i < queries.N; ++i) {
-			queries.val[i] = new float[queries.dim + 1];
+			// queries.val[i] = new float[queries.dim + 1];
+			// in.read((char*)queries.val[i], sizeof(float) * header[2]);
+			// queries.val[i][queries.dim - 1] = 0.0f;
+
+			queries.val[i] = queries.base+i*queries.dim;
 			in.read((char*)queries.val[i], sizeof(float) * header[2]);
-			queries.val[i][queries.dim - 1] = 0.0f;
 		}
 
 		for (int i = 0; i < data.N; ++i) {
-			data.val[i] = new float[data.dim + 1];
+			// data.val[i] = new float[data.dim + 1];
+			// in.read((char*)data.val[i], sizeof(float) * header[2]);
+			// data.val[i][data.dim - 1] = 0.0f;
+
+			data.val[i] = data.base+i*data.dim;
 			in.read((char*)data.val[i], sizeof(float) * header[2]);
-			data.val[i][data.dim - 1] = 0.0f;
 		}
 		
 		std::cout << "Load from new file: " << file << "\n";
@@ -222,7 +233,7 @@ public:
 	}
 
 	~Preprocess(){
-		clear_2d_array(data.val, data.N);
+		//clear_2d_array(data.val, data.N);
 		clear_2d_array(benchmark.indice, benchmark.N);
 		clear_2d_array(benchmark.innerproduct, benchmark.N);
 		delete[] SquareLen;

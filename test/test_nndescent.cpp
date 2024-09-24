@@ -44,9 +44,6 @@ using namespace kgraph;
 #define _INT_MAX 2147483640
 
 
-
-
-
 // Modify for Eigen
 typedef Eigen::MatrixXf MyType;
 
@@ -94,49 +91,313 @@ typedef kgraph::VectorOracle<MyType, MyType> MyOracle;
 #include "sol.h"
 #include "../includes/alg.h"
 
+inline void updatePQ(std::vector<int>& ep_set,float* qvec,float** data, int dim,int ef,
+std::vector<float> squareNorms,std::priority_queue<Res>& accessed_candidates, 
+std::priority_queue<Res>& top_candidates){
+  int m=ep_set.size();
+  int k=dim;
+  int n=1;
+
+  float* A=new float[m*k];
+  float* B=new float[k*n];
+  float* C=new float[m*n];
+
+  for(int i=0;i<m;i++){
+      memcpy(A+i*k,data[ep_set[i]],k*sizeof(float));
+  }
+
+  memcpy(B,qvec,k*sizeof(float));
+
+  memset(C,0.0f,m*n*sizeof(float));
+
+  cblas_sgemv(CblasRowMajor, CblasNoTrans,
+                m, k, 1.0, A, k, B, 1, 0.0, C, 1);
+  
+
+  for(int i=0;i<m;++i){
+    float dist=squareNorms[ep_set[i]]-2*C[i];
+    int start=ep_set[i];
+    accessed_candidates.emplace(start, -dist);
+    top_candidates.emplace(start, dist);
+    if (top_candidates.size() > ef) top_candidates.pop();
+  }
+}
+
+void searchInKnng(const std::vector<std::vector<uint32_t>> &nngraph, Data& data, 
+std::vector<float> squareNorms, queryN* q, 
+std::vector<int>& ep_set, int ef) {
+  int cost = 0;
+  //std::cout<<"size of knng: "<<nngraph.size()<<std::endl;
+  lsh::timer timer;
+  std::priority_queue<Res> accessed_candidates, top_candidates;
+  int n=nngraph.size();
+  std::vector<bool> visited(n,false);
+  std::vector<int> eps;
+  int M=1920;
+  eps.reserve(M);
+
+  for(auto& start:ep_set){
+    visited[start]=true;
+    eps.emplace_back(start);
+    for (auto& u : nngraph[start]) {
+      if (visited[u]) continue;
+      visited[u] = true;
+      eps.emplace_back(u);
+    }
+  }
+  cost+=eps.size();
+  updatePQ(eps,q->queryPoint,data.val,data.dim,ef,squareNorms,
+    accessed_candidates,top_candidates);
+
+
+  
+  // while (!accessed_candidates.empty()) {
+  //   eps.clear();
+
+  //   while (eps.size()<M&&!accessed_candidates.empty()){
+  //     Res top = accessed_candidates.top();
+  //     if (-top.dist > top_candidates.top().dist) break;
+  //     accessed_candidates.pop();
+  //     for (auto& u : nngraph[top.id]) {
+  //       if (visited[u]) continue;
+  //       visited[u] = true;
+  //       eps.emplace_back(u);
+  //     }
+  //   }
+  //   if(eps.empty()) break;
+
+  //   cost+=eps.size();
+  //   updatePQ(eps,q->queryPoint,data.val,data.dim,ef,squareNorms,
+  //   accessed_candidates,top_candidates);
+  // }
+
+  while (top_candidates.size() > q->k) top_candidates.pop();
+
+  q->res.resize(q->k);
+  int pos = q->k;
+  while (!top_candidates.empty()) {
+    q->res[--pos] = top_candidates.top();
+    top_candidates.pop();
+  }
+  q->time_total = timer.elapsed();
+  q->cost=cost;
+}
 
 void searchInKnng(const std::vector<std::vector<uint32_t>> &nngraph, Data& data, queryN* q, int start, int ef) {
-			int cost = 0;
-      //std::cout<<"size of knng: "<<nngraph.size()<<std::endl;
-			lsh::timer timer;
-			std::priority_queue<Res> accessed_candidates, top_candidates;
-      int n=nngraph.size();
-      std::vector<bool> visited(n,false);
-			visited[start] = true;
-			float dist = cal_L2sqr(q->queryPoint, data[start], data.dim);
-			cost++;
-			accessed_candidates.emplace(start, -dist);
-			top_candidates.emplace(start, dist);
+    int cost = 0;
+    //std::cout<<"size of knng: "<<nngraph.size()<<std::endl;
+    lsh::timer timer;
+    std::priority_queue<Res> accessed_candidates, top_candidates;
+    int n=nngraph.size();
+    std::vector<bool> visited(n,false);
+    visited[start] = true;
+    float dist = cal_L2sqr(q->queryPoint, data[start], data.dim);
+    cost++;
+    accessed_candidates.emplace(start, -dist);
+    top_candidates.emplace(start, dist);
 
-			while (!accessed_candidates.empty()) {
-				Res top = accessed_candidates.top();
-				if (-top.dist > top_candidates.top().dist) break;
-				accessed_candidates.pop();
+    while (!accessed_candidates.empty()) {
+      Res top = accessed_candidates.top();
+      if (-top.dist > top_candidates.top().dist) break;
+      accessed_candidates.pop();
 
-				for (auto& u : nngraph[top.id]) {
-					if (visited[u]) continue;
-					visited[u] = true;
-					dist = cal_L2sqr(q->queryPoint, data[u], data.dim);
-					cost++;
-					accessed_candidates.emplace(u, -dist);
-					top_candidates.emplace(u, dist);
-					if (top_candidates.size() > ef) top_candidates.pop();
-				}
-			}
+      for (auto& u : nngraph[top.id]) {
+        if (visited[u]) continue;
+        visited[u] = true;
+        dist = cal_L2sqr(q->queryPoint, data[u], data.dim);
+        cost++;
+        accessed_candidates.emplace(u, -dist);
+        top_candidates.emplace(u, dist);
+        if (top_candidates.size() > ef) top_candidates.pop();
+      }
 
-			while (top_candidates.size() > q->k) top_candidates.pop();
+      // for (auto& u : nngraph[top.id]) {
+      // 	if (visited[u]) continue;
+      // 	visited[u] = true;
+      // 	dist = cal_L2sqr(q->queryPoint, data[u], data.dim);
+      // 	cost++;
+      // 	accessed_candidates.emplace(u, -dist);
+      // 	top_candidates.emplace(u, dist);
+      // 	if (top_candidates.size() > ef) top_candidates.pop();
+      // }
 
-			q->res.resize(q->k);
-			int pos = q->k;
-			while (!top_candidates.empty()) {
-				q->res[--pos] = top_candidates.top();
-				top_candidates.pop();
-			}
-			q->time_total = timer.elapsed();
-      q->cost=cost;
-		}
+    }
 
+    while (top_candidates.size() > q->k) top_candidates.pop();
 
+    q->res.resize(q->k);
+    int pos = q->k;
+    while (!top_candidates.empty()) {
+      q->res[--pos] = top_candidates.top();
+      top_candidates.pop();
+    }
+    q->time_total = timer.elapsed();
+    q->cost=cost;
+}
+
+void searchInKnng(const std::vector<std::vector<uint32_t>> &nngraph, Data& data, queryN* q, 
+std::vector<int>& ep_set, int ef) {
+  int cost = 0;
+  //std::cout<<"size of knng: "<<nngraph.size()<<std::endl;
+  lsh::timer timer;
+  std::priority_queue<Res> accessed_candidates, top_candidates;
+  int n=nngraph.size();
+  std::vector<bool> visited(n,false);
+
+  for(auto& start:ep_set){
+    visited[start]=true;
+    float dist = cal_L2sqr(q->queryPoint, data[start], data.dim);
+    cost++;
+    accessed_candidates.emplace(start, -dist);
+    top_candidates.emplace(start, dist);
+  }
+
+  while (!accessed_candidates.empty()) {
+    Res top = accessed_candidates.top();
+    if (-top.dist > top_candidates.top().dist) break;
+    accessed_candidates.pop();
+
+    for (auto& u : nngraph[top.id]) {
+      if (visited[u]) continue;
+      visited[u] = true;
+      float dist = cal_L2sqr(q->queryPoint, data[u], data.dim);
+      cost++;
+      accessed_candidates.emplace(u, -dist);
+      top_candidates.emplace(u, dist);
+      if (top_candidates.size() > ef) top_candidates.pop();
+    }
+
+    // for (auto& u : nngraph[top.id]) {
+    // 	if (visited[u]) continue;
+    // 	visited[u] = true;
+    // 	dist = cal_L2sqr(q->queryPoint, data[u], data.dim);
+    // 	cost++;
+    // 	accessed_candidates.emplace(u, -dist);
+    // 	top_candidates.emplace(u, dist);
+    // 	if (top_candidates.size() > ef) top_candidates.pop();
+    // }
+
+  }
+
+  while (top_candidates.size() > q->k) top_candidates.pop();
+
+  q->res.resize(q->k);
+  int pos = q->k;
+  while (!top_candidates.empty()) {
+    q->res[--pos] = top_candidates.top();
+    top_candidates.pop();
+  }
+  q->time_total = timer.elapsed();
+  q->cost=cost;
+}
+
+#include <fstream>
+#include <iostream>
+#include <numeric>
+#include <string>
+#include <vector>
+
+using std::cout;
+using std::endl;
+using std::string;
+using std::vector;
+
+/// @brief Save knng in binary format (uint32_t) with name "output.bin"
+/// @param knng a (N * 100) shape 2-D vector
+/// @param path target save path, the output knng should be named as
+/// "output.bin" for evaluation
+void saveKNNG(const std::vector<std::vector<uint32_t>> &knng,
+              const std::string &path = "output.bin") {
+  std::ofstream ofs(path, std::ios::out | std::ios::binary);
+  //int K = 100;
+  const uint32_t N = knng.size();
+  std::cout << "Saving KNN Graph (" << knng.size() << " X 100) to " << path
+            << std::endl;
+//  cout<<"knng.front().size()" << knng.front().size()<<"\n";
+  assert(knng.front().size() == K);
+
+  ofs.write(reinterpret_cast<char const *>(&N), sizeof(uint32_t));
+  //ofs.write(reinterpret_cast<char const *>(&K), sizeof(int));
+  for (unsigned i = 0; i < knng.size(); ++i) {
+    auto const &knn = knng[i];
+    int K =knn.size();
+    ofs.write(reinterpret_cast<char const *>(&K), sizeof(int));
+    ofs.write(reinterpret_cast<char const *>(&knn[0]), K * sizeof(uint32_t));
+  }
+  ofs.close();
+}
+
+bool loadKNNG(std::vector<std::vector<uint32_t>> &knng, const std::string &path = "output.bin") {
+    std::ifstream ifs(path, std::ios::in | std::ios::binary);
+    if (!ifs) {
+        std::cerr << "Failed to open file: " << path << std::endl;
+        return false;
+    }
+
+    std::cout << "Loading kNNG from " << path << std::endl;
+
+    uint32_t N;
+    int K;
+    
+    // Read N and K
+    ifs.read(reinterpret_cast<char*>(&N), sizeof(uint32_t));
+    
+
+    // Resize the outer vector to hold N vectors
+    knng.resize(N);
+
+    // Read each vector
+    for (uint32_t i = 0; i < N; ++i) {
+      ifs.read(reinterpret_cast<char*>(&K), sizeof(int));
+      knng[i].resize(K);
+      ifs.read(reinterpret_cast<char*>(&knng[i][0]), K * sizeof(uint32_t));
+    }
+
+    ifs.close();
+    return true;
+}
+
+void nn_rnnG(std::vector<std::vector<uint32_t>> &knng, int M=24){
+  std::cout<<"Genarating APG form KNNG... "<<std::endl;
+  lsh::timer timer;
+  int N=knng.size();
+  std::vector<std::vector<uint32_t>> apg(N);
+  //int M=24;
+  std::vector<std::vector<uint32_t>> rnn(N);
+
+  lsh::progress_display pd(N);
+  for(int i=0;i<N;++i){
+    for(auto& u:knng[i]){
+      rnn[u].emplace_back(i);
+    }
+    ++pd;
+  }
+
+  std::cout<<"Genarating rnn time: "<<timer.elapsed()<<" s."<<std::endl;
+  timer.restart();
+  lsh::progress_display pd0(N);
+  for(int i=0;i<N;++i){
+    apg[i].reserve(2*M);
+    for(int j=0;j<M;++j){
+      apg[i].emplace_back(knng[i][j]);
+    }
+    int M0=M;
+    if(M0>rnn[i].size()) M0=rnn[i].size();
+    //M0=rnn[i].size();
+    int l=rnn[i].size()-1;
+    for(int j=0;j<M0;++j){
+      apg[i].emplace_back(rnn[i][l-j]);
+    }
+
+    ++pd0;
+  }
+
+  std::cout<<"Merging time: "<<timer.elapsed()<<" s."<<std::endl;
+  knng.swap(apg);
+  //knng=apg;
+}
+
+#include <iomanip>
 
 int main(int argc, char **argv) {
   boost::timer::cpu_timer timer;
@@ -144,12 +405,11 @@ int main(int argc, char **argv) {
 //  string source_path = "contest-data-release-1m.bin";
 //  string source_path = "contest-data-release-10m.bin";
 
-
   // Also accept other path for source data
   if (argc > 1) {
     source_path = string(argv[1]);
   }
-  omp_set_num_threads(32);
+  //omp_set_num_threads(32);
 
   // Read data points
 //  ReadBinEigen(source_path, KGraph::nodes);   // Eigen version
@@ -184,12 +444,12 @@ int main(int argc, char **argv) {
 
   params.S = 100;
   params.K = 100;
-  params.L=  265;
-  params.R = 350;
+  params.L=  160;
+  params.R = 180;
   params.iterations= 8;
 
 
-  params.recall = 1.0;
+  params.recall = 0.5;
   params.delta = 0.0002;
 
   // 【For submit】
@@ -200,29 +460,59 @@ int main(int argc, char **argv) {
   params.if_eval = true;
   params.controls= 100;
 
+  std::string path="indexes/"+dataset+".knng";
+  bool rebuilt=0;
+  if (argc > 2) {
+		rebuilt = std::stoi(argv[2]);
+	}
+  if(rebuilt||!loadKNNG(index->knng,path)){
+    index->build(oracle, params);
+    printf("Build finished!\n");
+    auto times = timer.elapsed();
+    std::cerr << "Build time: " << times.wall / 1e9 <<"\n";
 
-  index->build(oracle, params);
+    auto times_get_knng = timer.elapsed();
+    std::cerr << "Get KNNG time: " << (times_get_knng.wall - times.wall) / 1e9 <<"\n";
 
-  printf("Build finished!\n");
-  auto times = timer.elapsed();
-  std::cerr << "Build time: " << times.wall / 1e9 <<"\n";
+    
+    // Save to ouput.bin
+    saveKNNG(index->knng,path);
+    auto times_save = timer.elapsed();
+    std::cerr << "Save time: " << (times_save.wall - times_get_knng.wall) / 1e9 << "\n";
+  }
 
+  for(int i=0;i<10;++i){
+    int id=rand()%index->knng.size();
+    std::vector<Res> pairs(index->knng.size());
+    for(int j=0;j<index->knng.size();++j){
+      pairs[j]=Res(j,cal_L2sqr(prep.data[id],prep.data[j],prep.data.dim));
+    }
+    std::sort(pairs.begin(),pairs.end());
 
-  auto times_get_knng = timer.elapsed();
-  std::cerr << "Get KNNG time: " << (times_get_knng.wall - times.wall) / 1e9 <<"\n";
+    int k_=index->knng[id].size();
+    int recall=0;
+    for(int k=0;k<k_;++k){
+      for(int l=0;l<k_;++l){
+          if(pairs[k].id==index->knng[id][l]){
+              recall++;
+              break;
+          }
+      }
+    }
+    std::cout<<std::setw(8)<<id<<std::setw(8)<<" recall= "
+    <<std::setw(8)<<(float) recall/k_<<std::endl;
+  }
 
+  nn_rnnG(index->knng,48);
   size_t num_e=0;
   for(auto& edgeset:index->knng){
     num_e+=edgeset.size();
   }
   std::cout<<"Avg. Deg. = "<<(float) num_e/(prep.data.N)<<std::endl;
-  // Save to ouput.bin
-  //SaveKNNG(index->knng);
-  auto times_save = timer.elapsed();
-  std::cerr << "Save time: " << (times_save.wall - times_get_knng.wall) / 1e9 << "\n";
 
   float c_=0.5;
   int k_=50;
+  int M=48;
   int recall=0;
   float ratio=0.0f;
   auto& nngraph=index->knng;
@@ -231,17 +521,26 @@ int main(int argc, char **argv) {
   int cost=0;
 
   queryN** qs=new queryN*[prep.queries.N];
+  queryN** qs0=new queryN*[prep.queries.N];
   std::cout<<"nq= "<<prep.queries.N<<std::endl;
   for(int i=0;i<prep.queries.N;++i){
     qs[i]=new queryN(0 , c_, k_, prep.queries[i],prep.queries.dim, 1.0f);
+    qs0[i]=new queryN(0 , c_, k_, prep.queries[i],prep.queries.dim, 1.0f);
   }
+
+  // for(auto&x:nngraph){
+  //   if(x.size()>M)x.resize(M);
+  // }
 
   timer11.restart();
   for(int i=0;i<prep.queries.N;++i){
     //queryN q(0 , c_, k_, prep.queries[i],prep.queries.dim, 1.0f);
-    searchInKnng(nngraph, prep.data, qs[i], 0, k_+100);
+    std::vector<int> eps(prep.benchmark.indice[i]+50,prep.benchmark.indice[i]+80);
+    searchInKnng(nngraph, prep.data, qs[i], eps, k_+100);
+    //searchInKnng(nngraph, prep.data, qs[i], prep.benchmark.indice[i][0], k_+200);
+    //searchInKnng(nngraph, prep.data, qs[i], 0, k_+100);
   }
-  std::cout<<"Query Time= "<<(float) (timer11.elapsed()*1000)/(prep.queries.N)
+  std::cout<<"Query1 Time= "<<(float) (timer11.elapsed()*1000)/(prep.queries.N)
   <<" ms."<<std::endl;
 
 
@@ -260,11 +559,55 @@ int main(int argc, char **argv) {
   }
 
 
+
   auto times2 = timer.elapsed();
   std::cout<<"Recall= "<<(float) recall/(prep.queries.N*k_)<<std::endl;
   std::cout<<"Ratio = "<<(float) ratio/(prep.queries.N*k_)<<std::endl;
   std::cout<<"Cost  = "<<(float) cost/(prep.queries.N)<<std::endl;
-  std::cout<<"Query Time= "<<(float) (times2.wall-times1.wall)/(1e6*prep.queries.N)<<" ms."<<std::endl;
+  std::cout<<"Query1 Time= "<<(float) (times2.wall-times1.wall)/(1e6*prep.queries.N)<<" ms."<<std::endl;
   
+  std::vector<float> norms(prep.data.N);
+  for(int i=0;i<prep.data.N;++i){
+    norms[i]=cal_inner_product(prep.data[i],prep.data[i],prep.data.dim);
+  }
+
+  timer11.restart();
+  times1 = timer.elapsed();
+  qs=qs0;
+  recall=0;
+  ratio=0;
+  cost=0;
+  for(int i=0;i<prep.queries.N;++i){
+    //queryN q(0 , c_, k_, prep.queries[i],prep.queries.dim, 1.0f);
+    std::vector<int> eps(prep.benchmark.indice[i]+50,prep.benchmark.indice[i]+80);
+    searchInKnng(nngraph, prep.data, qs[i], 0, k_+200);
+    //searchInKnng(nngraph, prep.data, qs[i], prep.benchmark.indice[i][0], k_+200);
+    //searchInKnng(nngraph, prep.data, qs[i], 0, k_+100);
+  }
+  std::cout<<"\nQuery2 Time= "<<(float) (timer11.elapsed()*1000)/(prep.queries.N)
+  <<" ms."<<std::endl;
+
+
+  for(int i=0;i<prep.queries.N;++i){
+    cost+=qs[i]->cost;
+    for(int k=0;k<k_;++k){
+      ratio+=sqrt(qs[i]->res[k].dist)/prep.benchmark.innerproduct[i][k];
+      //ratio+=(q.res[k].dist)/prep.benchmark.indice[i][k];
+      for(int l=0;l<k_;++l){
+          if(qs[i]->res[k].id==prep.benchmark.indice[i][l]){
+              recall++;
+              break;
+          }
+      }
+    }
+  }
+
+
+  times2 = timer.elapsed();
+  std::cout<<"Recall= "<<(float) recall/(prep.queries.N*k_)<<std::endl;
+  std::cout<<"Ratio = "<<(float) ratio/(prep.queries.N*k_)<<std::endl;
+  std::cout<<"Cost  = "<<(float) cost/(prep.queries.N)<<std::endl;
+  std::cout<<"Query Time= "<<(float) (times2.wall-times1.wall)/(1e6*prep.queries.N)<<" ms."<<std::endl;
+
   return 0;
 }

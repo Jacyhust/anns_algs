@@ -8,9 +8,17 @@ struct Data
 	int N;
 	// Data matrix
 	float** val;
-
+	int offset;
 	// No safety checking!!!
 	float*& operator[](int i) { return val[i]; }
+
+//private:
+	float* base=nullptr;
+
+	~Data(){
+		delete [] base;
+		delete [] val;
+	}
 };
 
 struct Ben

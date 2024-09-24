@@ -44,11 +44,61 @@
 #include "kgraph.h"
 #include <chrono>
 #include <unordered_map>
+#include <unordered_set>
 //#include "kgraph-util.h"
 
 
 #include <Eigen/Dense>
 #include <bitset>
+
+// template <typename T>
+// bool hasDuplicates(const std::vector<T>& vec) {
+//     std::unordered_set<T> seen;
+//     for (const auto& elem : vec) {
+//         if (seen.find(elem) != seen.end()) {
+//             return true; 
+//         }
+//         seen.insert(elem);
+//     }
+//     return false;
+// }
+
+template <typename T>
+bool hasDuplicates(const std::vector<T>& vec) {
+    std::unordered_set<int> seen;
+    for (const auto& elem : vec) {
+        int id=(elem.id)>>1;
+        if (seen.find(id) != seen.end()) {
+            return true; 
+        }
+        seen.insert(id);
+    }
+    return false;
+}
+
+bool hasDuplicatesInt(std::vector<uint32_t>& vec) {
+    std::unordered_set<int> seen;
+    for (const auto& elem : vec) {
+        int id=elem;
+        if (seen.find(id) != seen.end()) {
+            return true; 
+        }
+        seen.insert(id);
+    }
+    return false;
+}
+
+void deDuplicatesInt(std::vector<uint32_t>& vec) {
+    std::unordered_set<int> seen;
+    for (const auto& elem : vec) {
+        int id=elem;
+        if (seen.find(id) != seen.end()) {
+            //return true; 
+        }
+        seen.insert(id);
+    }
+    //return false;
+}
 
 namespace kgraph {
     using namespace std;
@@ -62,6 +112,10 @@ namespace kgraph {
         Neighbor() {}
 
         Neighbor(uint32_t i, float d) : id(i), dist(d) {
+        }
+
+        bool operator == (const Neighbor& rhs) const {
+          return id == rhs.id;
         }
     };
     typedef vector<Neighbor> Neighbors;
@@ -119,13 +173,26 @@ namespace kgraph {
 
     static float EvaluateRecall(Neighbors const &pool, Neighbors const &knn) {
       unordered_map<uint32_t, bool> mp;
-      for(const auto& z:knn)
-        mp[z.id] = 1;
-      uint32_t found = 0;
+      // for(const auto& z:knn)
+      //   mp[z.id] = 1;
+      // uint32_t found = 0;
+      // for(const auto& z:pool){
+      //   if(mp[z.id >> 1])++found;//z.id >> 1 since some spaces are used for flag
+      // }
+
+      int cnt=0;
       for(const auto& z:pool){
-        if(mp[z.id >> 1])++found;
+        mp[z.id >> 1] = 1;
+        cnt++;
+        if(cnt>=knn.size()) break;
       }
-      return 1.0 * found / knn.size();
+        
+      uint32_t found = 0;
+      for(const auto& z:knn){
+        if(mp.find(z.id)!=mp.end())++found;//z.id >> 1 since some spaces are used for flag
+      }
+
+      return ((float)found) / knn.size();
     }
 
     static float EvaluateAccuracy(Neighbors const &pool, Neighbors const &knn) {
@@ -134,7 +201,8 @@ namespace kgraph {
       uint32_t cnt = 0;
       for (uint32_t i = 0; i < m; ++i) {
         if (knn[i].dist > 0) {
-          sum += abs(pool[i].dist - knn[i].dist) / knn[i].dist;
+          //sum += abs(pool[i].dist - knn[i].dist) / knn[i].dist;
+          sum += abs(pool[i].dist) / knn[i].dist;
           ++cnt;
         }
       }
@@ -370,7 +438,7 @@ namespace kgraph {
 
             uint32_t parallel_try_insert_batch(const vector<uint32_t>& id_vec, uint32_t st_id, const float * dist_mat, uint32_t my_id){
               LockGuard guard(lock);
-              int siz = id_vec.size();
+              int siz = id_vec.size();///size of nn_old
 
               for(uint32_t i = st_id; i < siz; i++){
                 if(i == my_id) continue;
@@ -390,6 +458,44 @@ namespace kgraph {
                   found = true;
                 }
               }
+
+              // if(hasDuplicates(pool)){
+              //   std::cout<<"There are duplication!\n"<<std::endl;
+              //   exit(-1);
+              // }
+
+              return 0;
+            }
+
+            uint32_t parallel_try_insert_batch_xi(const vector<uint32_t>& id_vec, uint32_t st_id, const float * dist_mat, uint32_t my_id){
+              LockGuard guard(lock);
+              int siz = id_vec.size();///size of nn_old
+
+              for(uint32_t i = st_id; i < siz; i++){
+                uint32_t id = id_vec[i];
+                if(id == my_id) continue;
+                float dist = dist_mat[i];
+
+                if(dist > radius) continue;
+                
+                uint32_t l = UpdateKnnList(&pool[0], L, Neighbor(id, dist));
+                if (l <= L) { // inserted
+                  pool[l].id = (id << 1) | 1;
+                  if (L + 1 == pool.size()) {
+                    radius = pool[L - 1].dist;
+                  }
+                  else {
+                    ++L;
+                  }
+                  found = true;
+                }
+              }
+
+              // if(hasDuplicates(pool)){
+              //   std::cout<<"There are duplication!\n"<<std::endl;
+              //   exit(-1);
+              // }
+
               return 0;
             }
 
@@ -545,6 +651,7 @@ namespace kgraph {
               for(size_t ia = 0; ia < cols; ia++, data_id += rows) {
                 uint32_t i = nn_new[ia];
                 nhoods[i].parallel_try_insert_batch(nn_old, 0, data + data_id, ia);
+                //nhoods[i].parallel_try_insert_batch_xi(nn_old, 0, data + data_id, i);
               }
 //              if(rows > cols) {
 
@@ -573,6 +680,7 @@ namespace kgraph {
                 for (size_t ib = cols; ib < rows; ib++, data_id += cols) {
                   uint32_t j = nn_old[ib];
                   nhoods[j].parallel_try_insert_batch(nn_new, 0, dataT + data_id, 10000);
+                  //nhoods[j].parallel_try_insert_batch_xi(nn_new, 0, dataT + data_id, j);
                 }
 //              }
 
@@ -726,6 +834,8 @@ public:
             square_sums = nodes.colwise().squaredNorm();
             vector<Control> controls;
             if (verbosity > 0) cerr << "Generating control..." << endl;
+
+            // generate baselines for random ''params.controls'' points
             GenerateControl(oracle, params.controls, params.K, &controls);
             if (verbosity > 0) cerr << "Initializing..." << endl;
             // initialize nhoods
@@ -756,7 +866,8 @@ public:
               else {
                 // 【start the clock for this itr】
                 {
-                  info.cost = n_comps / total;
+                  //info.cost = n_comps / total;
+                  info.cost=(float)n_comps/N;
                   accumulator_set<float, stats<tag::mean>> one_exact;
                   accumulator_set<float, stats<tag::mean>> one_approx;
                   accumulator_set<float, stats<tag::mean>> one_recall;
@@ -793,14 +904,7 @@ public:
                          << endl;
                   }
                 }
-                if (info.delta <= params.delta) {
-                  info.stop_condition = IndexInfo::DELTA;
-                  break;
-                }
-                if (info.recall >= params.recall) {
-                  info.stop_condition = IndexInfo::RECALL;
-                  break;
-                }
+                
               }
                 if(it < params.iterations -1) { // not last loop
                   update();
@@ -813,6 +917,15 @@ public:
 
                 elapsed_time = chrono::duration_cast<chrono::duration<double>>(stop_update - stop_join);
                 cout << "Update  elapsed: " << elapsed_time.count() << " seconds\n";
+
+                if (info.delta <= params.delta) {
+                  info.stop_condition = IndexInfo::DELTA;
+                  break;
+                }
+                if (info.recall >= params.recall) {
+                  info.stop_condition = IndexInfo::RECALL;
+                  break;
+                }
             }
             // Save id to knn
             knng.resize(N);
@@ -823,12 +936,31 @@ public:
               knn.resize(K);
 
               uint32_t  i = 0;
+              int k=0;
 
-              for (uint32_t k = 0; k < K; ++k, ++i) {
+              for (k = 0; k < K && i < pool.size(); ++i) {
                 uint32_t pool_i_id = pool[i].id >> 1;
                 if(pool_i_id == n) ++i;
-                knn[k] = pool_i_id;
+                // if(pool_i_id<0) ++i;
+                // if(pool_i_id>=N) ++i;
+
+                // float dist=pool[i].dist;
+                // bool flag=false;
+                // for(int j=0;j<k-1;++j){
+                //   float dist_ij=oracle(pool_i_id,knn[j]);
+                //   //float dist_ij=dist*2;
+                //   if(dist_ij<dist){
+                //     flag=true;
+                //     break;
+                //   }
+
+                // }
+
+                // if(!flag) 
+                knn[k++] = pool_i_id;
               }
+
+              knn.resize(k);
             }
         }
 
@@ -837,6 +969,13 @@ public:
     void KGraphImpl::build (IndexOracle const &oracle, IndexParams const &param, IndexInfo *info) {
         KGraphConstructor con(oracle, param, info);
         knng.swap(con.knng);
+        int cnt=0;
+        for(auto& es:knng){
+          if(hasDuplicatesInt(es)){
+            cnt++;
+          }
+        }
+        std::cout<<"There are duplications: "<<cnt<<std::endl;
     }
 
     KGraph *KGraph::create () {

@@ -10,49 +10,6 @@
 #include "../includes/fastGraph.h"
 using namespace std;
 
-// class Solution {
-//     hcnngLite::hcnng<calInnerProductReverse>* hcnng=nullptr;
-// public:
-//     void build(int d, const vector<float>& base){
-//         int minsize_cl = 750;
-//         int num_cl = 20;
-//         int max_mst_degree = 3;
-
-//         std::string dataset="test";
-//         Data data;
-
-//         data.N=base.size()/d;
-//         data.dim=d;
-//         //data.val=nullptr;
-//         data.val=new float*[data.N];
-//         //float* pos=&(base[0]);
-//         //const float* pos=base.data();
-//         float* pos=const_cast<float*>(base.data());
-//         for(int i=0;i<data.N;++i){
-//             //data.val[i]=new float[d];
-//             data.val[i]=pos+i*d;
-//         }
-
-//         hcnng=new hcnngLite::hcnng<calInnerProductReverse>(dataset, data, "test.index_hcnng", "index_result.txt",
-//             minsize_cl, num_cl, max_mst_degree, 1);
-//     }
-
-//     void search(const vector<float>& query,int* res){
-//         int dim=hcnng->data.dim;
-//         //int nq=query.size()/dim;
-//         int k_=10;
-//         int c_=1.0f;
-//         float m_=1.0f;
-//         float* pos=const_cast<float*>(query.data());
-
-//         queryN q(0 , c_, k_, pos,dim, m_);
-//         hcnng->knn(&q);
-
-//         for (int j = 0; j < 10; j++) {
-//             res[j]=q.res[j].id;
-//         }
-//     }
-// };
 
 class Solution {
     //hcnngLite::hcnng<calInnerProductReverse>* hcnng=nullptr;

@@ -20,7 +20,7 @@
 #include <vector>
 #include "./utils/patch_ubuntu.h"
 #include "./utils/performance.h"
-
+#include "./utils/basis.h"
 //extern std::atomic<size_t> _G_COST;
 
 struct resOutput

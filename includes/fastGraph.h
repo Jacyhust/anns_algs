@@ -9,6 +9,7 @@ using dist_t = float;
 using labeltype = int;
 using tableint = int;
 
+#include <cblas.h>
 //extern int _lsh_UB;
 
  using namespace threadPoollib;
@@ -470,6 +471,123 @@ struct fastGraph
 
         q->time_total = timer.elapsed();
     }
+
+//     void knnFast(queryN* q) {
+//         lsh::timer timer;
+        
+//         //entryHeap pqEntries;
+//         std::priority_queue<Res> candTable;
+//         std::vector<bool> flag_(N, false);
+
+//         int ef0=10000;
+
+//         timer.restart();
+//         searchLSHQuery(q, candTable,flag_);
+//         q->timeHash = timer.elapsed();
+
+// #ifdef USE_SSE
+//         _mm_prefetch((char*)(q->queryPoint), _MM_HINT_T0);
+// #endif
+
+//         std::priority_queue<std::pair<dist_t, tableint>> top_candidates;
+//         std::priority_queue<std::pair<dist_t, tableint>> candidate_set;
+
+//         while (!candTable.empty()) {
+//             auto u = candTable.top();
+//             dist_t dist = cal_L2sqr(q->hashval, hashval[u.id], lowDim);
+//             top_candidates.emplace(dist, u.id);
+//             candidate_set.emplace(-dist, u.id);
+//             candTable.pop();
+//         }
+
+//         dist_t lowerBound = top_candidates.top().first;
+
+//         while (!candidate_set.empty()) {
+
+//             std::pair<dist_t, tableint> current_node_pair = candidate_set.top();
+
+//             if ((-current_node_pair.first) > lowerBound) {
+//                 break;
+//             }
+//             candidate_set.pop();
+
+//             tableint current_node_id = current_node_pair.second;
+//             int* data = (int*)(links + current_node_id * size_data_per_element_);
+//             size_t size = *data;
+
+// #ifdef USE_SSE
+//             _mm_prefetch((char*)(dataset[data[1]]), _MM_HINT_T0);
+//             _mm_prefetch((char*)(data + 1), _MM_HINT_T0);
+// #endif
+
+//             for (size_t j = 1; j <= size; j++) {
+//                 int candidate_id = *(data + j);
+//                 //                    if (candidate_id == 0) continue;
+// #ifdef USE_SSE
+// #endif
+//                 if (!flag_[candidate_id]) {
+//                     flag_[candidate_id] = true;
+
+//                     dist_t dist = cal_L2sqr(q->hashval, hashval[candidate_id], lowDim);
+//                     q->cost++;
+//                     if (top_candidates.size() < ef || lowerBound > dist) {
+//                         candidate_set.emplace(-dist, candidate_id);
+// #ifdef USE_SSE
+//                         _mm_prefetch((char*)(dataset[candidate_set.top().second]), _MM_HINT_T0);
+// #endif
+
+//                         top_candidates.emplace(dist, candidate_id);
+//                         if (top_candidates.size() > ef0)
+//                             top_candidates.pop();
+
+//                         if (!top_candidates.empty())
+//                             lowerBound = top_candidates.top().first;
+//                     }                   
+//                 }
+//             }
+//         }
+
+        
+//         int bm=top_candidates.size();
+//         //auto vec_tc=top_candidates.data();
+//         int bk=q->dim;
+//         int bn=1;
+//         //int repetition=100;
+
+//         float* A=new float[bm*bk];
+//         //float* B1=new float[k*n];
+//         float* B2=new float[bk*bn];
+//         float* C=new float[bm*bn];
+//         std::vector<Res> ids(bm);
+
+//         for(int i=0;i<bm;i++){
+//             auto top=top_candidates.top();
+//             top_candidates.pop();
+//             ids[i].id=top.id;
+//             memcpy(A+i*bk,dataset[top.id],bk*sizeof(float));
+//         }
+//         memcpy(B2,q->queryPoint,bk);
+//         memset(C,0.0f,bm*bn*sizeof(float));
+//         cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
+//                 bm, bn, bk, 1.0, A, bk, B2, bk, 0.0, C, bn);
+        
+        
+//         for(int i=0;i<bm;i++){
+//             ids[i].dist=C[i];
+//         }
+
+        
+
+//         q->res.resize(q->k);
+//         for (int i = q->k - 1; i > -1; --i) {
+//             std::pair<dist_t, tableint> rez = top_candidates.top();
+//             q->res[i] = Res(rez.first, rez.second);
+//             top_candidates.pop();
+//         }
+
+//         q->time_total = timer.elapsed();
+//     }
+
 
     void knnParalle(queryN* q) {
         lsh::timer timer;
