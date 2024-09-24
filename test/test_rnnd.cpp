@@ -3,7 +3,7 @@
 #include <chrono>
 
 #include "../includes/RNNDescent.h"
-#include "utils/io.hpp"
+#include "../includes/utils/io.hpp"
 
 #include "sol.h"
 #include "../includes/alg.h"
