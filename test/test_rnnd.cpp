@@ -7,7 +7,7 @@
 
 #include "sol.h"
 #include "../includes/alg.h"
-
+#include "../includes/indexDescdent.hpp"
 
 using namespace std;
 
@@ -49,15 +49,6 @@ int main(int argc, char *argv[])
     Preprocess prep(data_fold1 + (argvStr[1]), data_fold2 + (argvStr[3]));
 
     base_data.load(prep.data.base,prep.data.N,prep.data.dim);
-    //base_data.load(base_path, 128, 0, 4);
-
-
-
-    // size_t data_size;
-    // base_data.resize(data_size, 100);
-    // for (unsigned id = 0; id < data_size; ++id) {
-    //     base_data.add_test((float*)(data + (size_t)id * 416 + 8));
-    // }
 
     rnndescent::MatrixOracle<float, rnndescent::metric::l2sqr> oracle(base_data);
 
@@ -78,6 +69,8 @@ int main(int argc, char *argv[])
     stat(index_graph);
 
     //IO::saveBinVec(sav_pth, index_graph);
-
+    indexFromKNNG indexRNN(index_graph, 0);
+    test(indexRNN, prep.queries, prep);
     return 0;
 }
+

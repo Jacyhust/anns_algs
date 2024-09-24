@@ -15,7 +15,7 @@
 #include <fstream>
 #include <stdexcept>
 #include <iostream>
-
+#include <stdlib.h>
 #ifdef __GNUC__
 #ifdef __AVX__
 #define KGRAPH_MATRIX_ALIGN 32
@@ -26,6 +26,8 @@
 #define KGRAPH_MATRIX_ALIGN 4
 #endif
 #endif
+#else
+#define KGRAPH_MATRIX_ALIGN 4
 #endif
 
 namespace rnndescent
@@ -109,7 +111,14 @@ namespace rnndescent
             */
             if (data)
                 free(data);
-            data = (char *)memalign(A, row * stride); // SSE instruction needs data to be aligned
+
+#ifdef __GNUC__
+            data = (char*)memalign(A, row * stride); // SSE instruction needs data to be aligned
+#else
+            data = (char*)_aligned_malloc(row * stride, A);
+#endif
+            
+
             // if (!data) throw runtime_error("memalign");
         }
 
@@ -121,8 +130,14 @@ namespace rnndescent
         }
         ~Matrix()
         {
-            if (data)
+            if (data) {
+#ifdef __GNUC__
                 free(data);
+#else
+                _aligned_free(data);
+#endif
+            }
+                
         }
         unsigned size() const
         {
@@ -311,7 +326,7 @@ namespace rnndescent
          */
         virtual float operator()(unsigned i, unsigned j) const = 0;
         virtual float get_dist(unsigned, float *) const = 0;
-        virtual void *operator[](unsigned i) const = 0;
+        //virtual void *operator[](unsigned i) const = 0;
     };
 
     template <typename DATA_TYPE, typename DIST_TYPE>

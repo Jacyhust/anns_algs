@@ -8,7 +8,7 @@
 #include <vector>
 
 #include <omp.h>
-
+#include <iterator>
 #include <mutex>
 
 namespace rnndescent
