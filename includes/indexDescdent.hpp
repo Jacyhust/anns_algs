@@ -1,4 +1,5 @@
 #include "alg.h"
+#include <assert.h>
 
 class indexFromKNNG
 {

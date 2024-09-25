@@ -8,6 +8,8 @@
 #include "sol.h"
 #include "../includes/alg.h"
 #include "../includes/indexDescdent.hpp"
+#include "../includes/srp.h"
+
 
 using namespace std;
 
@@ -48,42 +50,14 @@ int main(int argc, char *argv[])
     rnndescent::Matrix<float> base_data;
     Preprocess prep(data_fold1 + (argvStr[1]), data_fold2 + (argvStr[3]));
 
-    base_data.load(prep.data.base,prep.data.N,prep.data.dim);
+    int L=5;
+    int K=12;
+    std::vector<std::vector<int>> part_map;
 
+    lsh::srp srp(prep.data,part_map,prep.data.N,
+    prep.data.dim,L,K);
 
-
-    rnndescent::MatrixOracle<float, rnndescent::metric::l2sqr> oracle(base_data);
-
-    std::unique_ptr<rnndescent::RNNDescent> index(new rnndescent::RNNDescent(oracle, para));
-
-    bool rebuilt=0;
-    if (argc > 2) rebuilt = std::stoi(argv[2]);
-    std::string path="indexes/"+dataset+".rnnd";
-    std::vector<std::vector<unsigned>> index_graph;
-
-    if(rebuilt||!loadKNNG(index_graph,path)){
-        auto start = chrono::high_resolution_clock::now();
-        index->build(oracle.size(), true);
-        auto end = chrono::high_resolution_clock::now();
-
-        cout << "Elapsed time in milliseconds: "
-            << 1.0 * std::chrono::duration_cast<chrono::milliseconds>(end - start).count() / 1000
-            << " s" << endl;
-
-        //std::cout << "sav_pth = " << sav_pth << "\n";
-        
-        index->extract_index_graph(index_graph);
-
-        stat(index_graph);
-
-        saveKNNG(index_graph,path);
-    }
 
     
-
-    //IO::saveBinVec(sav_pth, index_graph);
-    indexFromKNNG indexRNN(index_graph, 0);
-    test(indexRNN, prep.queries, prep);
-    return 0;
 }
 
