@@ -10,7 +10,11 @@ LFLAGS = -std=c++11 -O3 $(OPTION)  -L$(MKLROOT)/intel64 -lboost_timer -lmkl_inte
 CXXFLAGS := -std=c++17 -mavx512f -Ofast -lrt -DNDEBUG  -DHAVE_CXX0X -openmp -march=native -fpic -w -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=0
 # CXXFLAGS := -O3 -I /usr/include/eigen3 -fopenmp -mcmodel=medium -std=c++17 -mcpu=native #-fpic -mavx512f -lrt -DHAVE_CXX0X -ftree-vectorize -ftree-vectorizer-verbose=0 -openmp -DNDEBUG 
 
-all: $(TARGET)
+.PHONY:rnnd
+
+.PHONY:srp
+
+all: $(TARGET) 
 
 tb:./test/test_recall.cpp
 	$(CXX) $(CXXFLAGS)  -o tb ./test/test_recall.cpp
@@ -31,6 +35,14 @@ nndescent:./test/test_nndescent.cpp ./includes/kgraph.cpp
 
 blas:./test/test_openblas.cpp
 	$(CXX) $(CXXFLAGS) -o blas ./test/test_openblas.cpp -lopenblas
+
+rnnd:./test/test_rnnd.cpp ./includes/RNNDescent.cpp
+	@if [ -e rnnd ]; then rm rnnd; fi
+	$(CXX) $(CXXFLAGS) -o rnnd ./test/test_rnnd.cpp ./includes/RNNDescent.cpp
+
+srp:./test/test_srp.cpp ./includes/RNNDescent.cpp
+	@if [ -e srp ]; then rm srp; fi
+	$(CXX) $(CXXFLAGS) -o srp ./test/test_srp.cpp ./includes/RNNDescent.cpp -lopenblas
 
 
 clean:

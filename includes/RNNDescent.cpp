@@ -140,8 +140,10 @@ namespace rnndescent
             std::vector<Neighbor> old_pool;
             {
                 std::lock_guard<std::mutex> guard(nhood.lock);
-                old_pool = pool;
-                pool.clear();
+                // old_pool = pool;
+                // pool.clear();
+                old_pool.swap(pool);
+                //old_
             }
             std::sort(old_pool.begin(), old_pool.end());
             old_pool.erase(std::unique(old_pool.begin(), old_pool.end(),

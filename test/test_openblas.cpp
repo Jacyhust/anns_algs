@@ -186,12 +186,12 @@ int main(int argc, char **argv) {
             // float* B2=new float[k*n];
             //C=new float[m*n];
             for(int i=0;i<m;i++){
-                //  if (i + L < m) {
-                //     __builtin_prefetch(prep.data[i + L], 0, 1);
-                // }
-                // else{
-                //     __builtin_prefetch(prep.queries[0], 0, 1);
-                // }
+                 if (i + L < m) {
+                    __builtin_prefetch(prep.data[i + L], 0, 1);
+                }
+                else{
+                    __builtin_prefetch(prep.queries[0], 0, 1);
+                }
                 memcpy(A2+i*k,prep.data[i],k*sizeof(float));
             }
             //memmove(A2,A,m*k*sizeof(float));
