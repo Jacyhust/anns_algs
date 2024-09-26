@@ -95,6 +95,16 @@ namespace rnndescent
                 return sqrt(l2sqr::apply<T>(t1, t2, dim));
             }
         };
+
+        struct ip
+        {
+            template <typename T>
+            static float apply(T const* t1, T const* t2, unsigned dim)
+            {
+                return cal_inner_product(t1, t2, dim);
+                //return sqrt(l2sqr::apply<T>(t1, t2, dim));
+            }
+        };
     }
 
     /// Matrix data.
@@ -227,15 +237,16 @@ namespace rnndescent
             }
         }
 
-        // void load(const T *base_vector, size_t data_size, size_t data_dim)
-        // {
-        //     reset(data_size, data_dim);
-        //     zero();
-        //     for (size_t i = 0; i < data_size; ++i)
-        //     {
-        //         memcpy(&data[stride * i], base_vector + i * data_dim, sizeof(T) * data_dim);
-        //     }
-        // }
+        void load(std::vector<int>& ids, const T* base_vector, size_t data_dim)
+         {
+             reset(ids.size(), data_dim);
+             zero();
+             for (size_t i = 0; i < ids.size(); ++i)
+             {
+                 memcpy(&data[stride * ids[i]], base_vector + i * data_dim, sizeof(T) * data_dim);
+                 //memcpy(&data[stride * i], base_vector + i * data_dim, sizeof(T) * data_dim);
+             }
+         }
 
         void add_test(const T *new_vector)
         {

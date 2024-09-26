@@ -8,6 +8,7 @@
 #include "../includes/utils/StructType.h"
 //#include "../includes/alg.h"
 #include "../includes/indexDescdent.hpp"
+#include "../includes/mariaRNN.h"
 
 #if defined(unix) || defined(__unix__)
 //std::string data_fold = "/home/xizhao/dataset/", index_fold = " ";

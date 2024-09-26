@@ -312,6 +312,7 @@ namespace rnndescent
             auto &pool = graph[u].pool;
             int K = std::min(K0, (int)pool.size());
             auto &nbhood = idx_graph[u];
+            nbhood.reserve(K);
             for (int m = 0; m < K; ++m)
             {
                 int id = pool[m].id;
