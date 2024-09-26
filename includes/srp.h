@@ -82,7 +82,7 @@ namespace lsh
 			//std::mt19937 rng(int(std::time(0)));
 			std::mt19937 rng(int(0));
 			std::normal_distribution<float> nd;
-			for(int i=0;i<S*dim;++i) rndAs[i]=(nd(rng));
+			for (int i = 0; i < S * dim; ++i) rndAs[i] = (nd(rng));
 		}
 
 

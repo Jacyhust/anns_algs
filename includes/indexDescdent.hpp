@@ -204,7 +204,7 @@ bool loadKNNG(std::vector<std::vector<uint32_t>>& knng, const std::string& path 
     return true;
 }
 
-void test(indexFromKNNG& index,Data& queries,Preprocess& prep) {
+void test(indexFromKNNG& index, Data& queries, Preprocess& prep) {
     float c_ = 0.5;
     int k_ = 50;
     int M = 48;

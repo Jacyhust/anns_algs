@@ -83,14 +83,63 @@ public:
 
 	}
 
+	void searchInKnng(std::vector<std::vector<uint32_t>>& apg, std::vector<uint32_t>& ids, queryN* q, int start, int ef) {
+		auto& nngraph = apg;
+		int cost = 0;
+		//std::cout<<"size of knng: "<<nngraph.size()<<std::endl;
+		//lsh::timer timer;
+		std::priority_queue<Res> accessed_candidates;
+
+		auto& top_candidates = q->resHeap;
+
+		int n = nngraph.size();
+		std::vector<bool> visited(n, false);
+		visited[start] = true;
+		float dist = calInnerProductReverse(q->queryPoint, data[start], data.dim);
+		cost++;
+		accessed_candidates.emplace(start, -dist);
+		top_candidates.emplace(ids[start], dist);
+
+		while (!accessed_candidates.empty()) {
+			Res top = accessed_candidates.top();
+			if (-top.dist > top_candidates.top().dist) break;
+			accessed_candidates.pop();
+
+			for (auto& u : nngraph[top.id]) {
+				if (visited[u]) continue;
+				visited[u] = true;
+				dist = calInnerProductReverse(q->queryPoint, data[start], data.dim);
+				cost++;
+				accessed_candidates.emplace(u, -dist);
+				top_candidates.emplace(ids[u], dist);
+				if (top_candidates.size() > ef) top_candidates.pop();
+			}
+		}
+
+		while (top_candidates.size() > q->k) top_candidates.pop();
+
+		//q->resHeap
+		//q->res.resize(q->k);
+		//int pos = q->k;
+		//while (!top_candidates.empty()) {
+		//	q->res[--pos] = top_candidates.top();
+		//	top_candidates.pop();
+		//}
+		//q->time_total = timer.elapsed();
+		q->cost += cost;
+	}
+
 	void knn(queryN* q) {
 		lsh::timer timer;
 		timer.restart();
-	
+		
 
 		for (int i = parti.numChunks - 1; i >= 0; --i) {
 			if ((!q->resHeap.empty()) && (1.0f-q->resHeap.top().dist) > 
 				q->norm * (parti.MaxLen[i])) break;
+
+
+			auto& knng = knngs[i];
 
 
 			////apgs[i] = new hnsw(ips, parti.nums[i], M, ef);
@@ -110,16 +159,18 @@ public:
 			
 		}
 
-		while (!q->resHeap.empty()) {
-			auto top = q->resHeap.top();
-			q->resHeap.pop();
-			q->res.emplace_back(top.id, 1.0-top.dist);
+		auto& top_candidates = q->resHeap;
+		q->res.resize(q->k);
+		int pos = q->k;
+		while (!top_candidates.empty()) {
+			q->res[--pos] = top_candidates.top();
+			top_candidates.pop();
 		}
-		
-		std::reverse(q->res.begin(), q->res.end());
 
 		q->time_total = timer.elapsed();
 	}
+
+
 
 	//void GetTables(Preprocess& prep);
 	//bool IsBuilt(const std::string& file);

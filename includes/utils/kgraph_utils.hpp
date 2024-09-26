@@ -101,7 +101,7 @@ namespace rnndescent
             template <typename T>
             static float apply(T const* t1, T const* t2, unsigned dim)
             {
-                return cal_inner_product(t1, t2, dim);
+                return -cal_inner_product(t1, t2, dim);
                 //return sqrt(l2sqr::apply<T>(t1, t2, dim));
             }
         };
