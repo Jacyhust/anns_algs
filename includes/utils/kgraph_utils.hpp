@@ -216,7 +216,6 @@ namespace rnndescent
         }
 
 
-
         void load(const T *base_vector, size_t data_size, size_t data_dim)
         {
             reset(data_size, data_dim);
@@ -226,16 +225,6 @@ namespace rnndescent
                 memcpy(&data[stride * i], base_vector + i * data_dim, sizeof(T) * data_dim);
             }
         }
-
-        // void load(const T *base_vector, size_t data_size, size_t data_dim)
-        // {
-        //     reset(data_size, data_dim);
-        //     zero();
-        //     for (size_t i = 0; i < data_size; ++i)
-        //     {
-        //         memcpy(&data[stride * i], base_vector + i * data_dim, sizeof(T) * data_dim);
-        //     }
-        // }
 
         void add_test(const T *new_vector)
         {
