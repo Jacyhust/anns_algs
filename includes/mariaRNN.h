@@ -3,6 +3,8 @@
 #include <algorithm>
 #include "utils/Preprocess.h"
 #include "srp.h"
+#include "../includes/RNNDescent.h"
+
 class mariaV6
 {
 private:
@@ -44,9 +46,9 @@ public:
 			base_data.load(parti.EachParti[i], data.base, data.dim);
 			rnndescent::MatrixOracle<float, rnndescent::metric::ip> oracle(base_data);
 			std::unique_ptr<rnndescent::RNNDescent> index(new rnndescent::RNNDescent(oracle, para));
-			auto start = chrono::high_resolution_clock::now();
+			//auto start = chrono::high_resolution_clock::now();
 			index->build(oracle.size(), true);
-			auto end = chrono::high_resolution_clock::now();
+			//auto end = chrono::high_resolution_clock::now();
 			/*cout << "Elapsed time in milliseconds: "
 				<< 1.0 * std::chrono::duration_cast<chrono::milliseconds>(end - start).count() / 1000
 				<< " s" << endl;*/
