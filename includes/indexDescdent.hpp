@@ -1,6 +1,6 @@
-#include "alg.h"
+//#include "alg.h"
 #include <assert.h>
-
+#include "utils/Preprocess.h"
 class indexFromKNNG
 {
 	std::vector<std::vector<uint32_t>> apg;

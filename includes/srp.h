@@ -9,7 +9,8 @@
 
 #define USE_BLAS
 
-#ifdef USE_BLAS
+//#ifdef USE_BLAS
+#if defined(__GNUC__) && defined(USE_BLAS)
 #include <cblas.h>
 #endif
 
@@ -86,7 +87,7 @@ namespace lsh
 
 
 		void GetHash(Data& data){
-#ifdef USE_BLAS
+#if defined(__GNUC__) && defined(USE_BLAS)
 			int m=hashvals.size();
 			int k=dim;
 			int n=S;
@@ -112,6 +113,8 @@ namespace lsh
 				}
 			}
 #else
+
+#pragma omp paralle for
 			for(int i=0;i<hashvals.size();++i){
 				hashvals[i].resize(L,0);
 				for(int j=0;j<L;++j){

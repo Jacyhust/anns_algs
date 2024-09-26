@@ -1,5 +1,6 @@
 
 #include "RNNDescent.h"
+#include "utils/kgraph_utils.hpp"
 #include <iostream>
 
 namespace rnndescent

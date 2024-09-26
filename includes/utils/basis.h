@@ -150,8 +150,6 @@ namespace lsh
 #include "patch_ubuntu.h"
 //extern std::atomic<size_t> _G_COST;
 
-
-
 // struct comp_cost{
 // 	static std::atomic<size_t> _G_COST;
 // };
@@ -186,7 +184,7 @@ inline float cal_L2sqr(float* v1, float* v2, int dim)
 	return (faiss::fvec_L2sqr_avx512(v1, v2, dim));
 #else
 	//printf("here11!\n");
-	return calL2Sqr_fast(v1,v2,dim);
+	return calL2Sqr_fast(v1, v2, dim);
 	float res = 0.0;
 	for (int i = 0; i < dim; ++i) {
 		res += (v1[i] - v2[i]) * (v1[i] - v2[i]);
@@ -204,7 +202,7 @@ inline float cal_inner_product(const float* v1, const float* v2, int dim)
 	// exit(-1);
 	return faiss::fvec_inner_product_avx512(v1, v2, dim);
 #else
-	return calIp_fast(v1, v2, dim);
+	return calIp_fast(const_cast<float*>(v1), const_cast<float*>(v2), dim);
 
 	float res = 0.0;
 	for (int i = 0; i < dim; ++i) {
@@ -224,7 +222,7 @@ inline float cal_L2sqr(const float* v1, const float* v2, int dim)
 	return (faiss::fvec_L2sqr_avx512(v1, v2, dim));
 #else
 	//printf("here11!\n");
-	return calL2Sqr_fast(v1,v2,dim);
+	return calL2Sqr_fast(const_cast<float*>(v1), const_cast<float*>(v2), dim);
 	float res = 0.0;
 	for (int i = 0; i < dim; ++i) {
 		res += (v1[i] - v2[i]) * (v1[i] - v2[i]);

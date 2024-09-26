@@ -29,10 +29,17 @@ public:
 		dim = data.dim;
 		L = L_;
 		K = K_;
+		//const int min_size = 400;
 		para.S = 36;
 		para.T1 = 2;
 		para.T2 = 8;
+
+		lsh::timer timer;
+		std::cout << "CONSTRUCTING GRAPH..." << std::endl;
+		timer.restart();
 		buildIndex();
+		std::cout << "CONSTRUCTING TIME: " << timer.elapsed() << "s." << std::endl << std::endl;
+		
 	}
 
 	void buildIndex() {
@@ -41,8 +48,25 @@ public:
 		knngs.resize(parti.numChunks);
 
 		for (int i = parti.numChunks - 1; i >= 0; --i) {
-			rnndescent::Matrix<float> base_data;
+			//if (parti.EachParti[i].size() < para.S) {
+			//	int num = parti.EachParti[i].size();
+			//	auto& knng = knngs[i];
+			//	knng.resize(num);
+			//	for (int l = 0; l < num; ++l) {
+			//		knng[l].reserve(num - 1);
+			//		for (int j = 0; j < num; ++j) {
+			//			if (l != j) knng[l].emplace_back(j);
+			//		}
+			//	}
 
+			//	continue;
+			//}
+
+			if (parti.EachParti[i].size() < 400) {
+				continue;
+			}
+
+			rnndescent::Matrix<float> base_data;
 			base_data.load(parti.EachParti[i], data.base, data.dim);
 			rnndescent::MatrixOracle<float, rnndescent::metric::ip> oracle(base_data);
 			std::unique_ptr<rnndescent::RNNDescent> index(new rnndescent::RNNDescent(oracle, para));

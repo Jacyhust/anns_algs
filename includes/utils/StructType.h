@@ -17,7 +17,7 @@ struct Data
 
 	~Data(){
 		delete [] base;
-		delete [] val;
+		//delete [] val;
 	}
 };
 

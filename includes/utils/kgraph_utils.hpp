@@ -242,7 +242,7 @@ namespace rnndescent
              zero();
              for (size_t i = 0; i < ids.size(); ++i)
              {
-                 memcpy(&data[stride * ids[i]], base_vector + i * data_dim, sizeof(T) * data_dim);
+                 memcpy(&data[stride * i], base_vector + ids[i] * data_dim, sizeof(T) * data_dim);
                  //memcpy(&data[stride * i], base_vector + i * data_dim, sizeof(T) * data_dim);
              }
          }
