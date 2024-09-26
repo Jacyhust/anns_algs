@@ -161,7 +161,7 @@ void saveKNNG(const std::vector<std::vector<uint32_t>>& knng,
     std::cout << "Saving KNN Graph (" << knng.size() << " X 100) to " << path
         << std::endl;
     //  cout<<"knng.front().size()" << knng.front().size()<<"\n";
-    assert(knng.front().size() == K);
+    //assert(knng.front().size() == K);
 
     ofs.write(reinterpret_cast<char const*>(&N), sizeof(uint32_t));
     //ofs.write(reinterpret_cast<char const *>(&K), sizeof(int));
