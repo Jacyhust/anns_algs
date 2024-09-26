@@ -116,7 +116,7 @@ public:
 			}
 		}
 
-		while (top_candidates.size() > q->k) top_candidates.pop();
+		//while (top_candidates.size() > q->k) top_candidates.pop();
 
 		//q->resHeap
 		//q->res.resize(q->k);
@@ -133,14 +133,25 @@ public:
 		lsh::timer timer;
 		timer.restart();
 		
-
+		int ef = 200;
 		for (int i = parti.numChunks - 1; i >= 0; --i) {
 			if ((!q->resHeap.empty()) && (1.0f-q->resHeap.top().dist) > 
 				q->norm * (parti.MaxLen[i])) break;
 
+			if (parti.EachParti[i].size() < 400) {
+				auto& top_candidates = q->resHeap;
+				for (auto& x : parti.EachParti[i]) {
+					float dist = calInnerProductReverse(q->queryPoint, data[x], data.dim);
+
+					top_candidates.emplace(x, dist);
+					if (top_candidates.size() > ef) top_candidates.pop();
+				}
+
+				continue;
+			}
 
 			auto& knng = knngs[i];
-			int ef=200;
+			
 			searchInKnng(knng, parti.EachParti[i], q, 0, ef);
 			////apgs[i] = new hnsw(ips, parti.nums[i], M, ef);
 			//auto& appr_alg = apgs[i];
@@ -160,6 +171,7 @@ public:
 		}
 
 		auto& top_candidates = q->resHeap;
+		while (top_candidates.size() > q->k) top_candidates.pop();
 		q->res.resize(q->k);
 		int pos = q->k;
 		while (!top_candidates.empty()) {
