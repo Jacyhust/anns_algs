@@ -22,7 +22,7 @@ struct Data
 		}
 		if (val) {
 			delete[] val;
-			delete val;
+			val = nullptr;
 		}
 
 		
