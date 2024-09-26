@@ -2,29 +2,58 @@
 #include <mutex>
 #include <algorithm>
 #include "utils/Preprocess.h"
-
+#include "srp.h"
 class mariaV6
 {
 private:
 	std::string index_file;
 	Partition parti;
+	std::vector<std::vector<std::vector<uint32_t>>> knngs;
+	rnndescent::rnn_para para;
+	int* link_lists = nullptr;
+	Data data;
 public:
 	int N;
 	int dim;
 	//int S;
-	//int L;
-	//int K;
+	int L;
+	int K;
  
 	std::string alg_name = "mariaV6";
 public:
-	mariaV6(Data& data, Partition& part_) :parti(part_) {
+	mariaV6(Data& data_, Partition& part_, int L_, int K_) :parti(part_) {
+		data = data_;
 		N = data.N;
 		dim = data.dim;
+		L = L_;
+		K = K_;
+		para.S = 36;
+		para.T1 = 2;
+		para.T2 = 8;
 		buildIndex();
 	}
 
 	void buildIndex() {
-		
+		lsh::srp srp(data, parti.EachParti, data.N, data.dim, L, K);
+
+		knngs.resize(parti.numChunks);
+
+		for (int i = parti.numChunks - 1; i >= 0; --i) {
+			rnndescent::Matrix<float> base_data;
+
+			base_data.load(parti.EachParti[i], data.base, data.dim);
+			rnndescent::MatrixOracle<float, rnndescent::metric::ip> oracle(base_data);
+			std::unique_ptr<rnndescent::RNNDescent> index(new rnndescent::RNNDescent(oracle, para));
+			auto start = chrono::high_resolution_clock::now();
+			index->build(oracle.size(), true);
+			auto end = chrono::high_resolution_clock::now();
+			/*cout << "Elapsed time in milliseconds: "
+				<< 1.0 * std::chrono::duration_cast<chrono::milliseconds>(end - start).count() / 1000
+				<< " s" << endl;*/
+			index->extract_index_graph(knngs[i]);
+		}
+
+
 	}
 
 	void knn(queryN* q) {

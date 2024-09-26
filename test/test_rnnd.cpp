@@ -45,15 +45,12 @@ int main(int argc, char *argv[])
     para.T1 = 2;
     para.T2 = 8;
 
-    rnndescent::Matrix<float> base_data;
+    
     Preprocess prep(data_fold1 + (argvStr[1]), data_fold2 + (argvStr[3]));
 
-    base_data.load(prep.data.base,prep.data.N,prep.data.dim);
-
-
-
+    rnndescent::Matrix<float> base_data;
+    base_data.load(prep.data.base, prep.data.N, prep.data.dim);
     rnndescent::MatrixOracle<float, rnndescent::metric::l2sqr> oracle(base_data);
-
     std::unique_ptr<rnndescent::RNNDescent> index(new rnndescent::RNNDescent(oracle, para));
 
     bool rebuilt=0;
