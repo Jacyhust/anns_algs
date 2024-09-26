@@ -11,8 +11,8 @@ CXXFLAGS := -std=c++17 -mavx512f -Ofast -lrt -DNDEBUG  -DHAVE_CXX0X -openmp -mar
 # CXXFLAGS := -O3 -I /usr/include/eigen3 -fopenmp -mcmodel=medium -std=c++17 -mcpu=native #-fpic -mavx512f -lrt -DHAVE_CXX0X -ftree-vectorize -ftree-vectorizer-verbose=0 -openmp -DNDEBUG 
 
 .PHONY:rnnd
-
 .PHONY:srp
+.PHONY:maria
 
 all: $(TARGET) 
 
@@ -43,6 +43,9 @@ rnnd:./test/test_rnnd.cpp ./includes/RNNDescent.cpp
 srp:./test/test_srp.cpp ./includes/RNNDescent.cpp
 	@if [ -e srp ]; then rm srp; fi
 	$(CXX) $(CXXFLAGS) -o srp ./test/test_srp.cpp ./includes/RNNDescent.cpp -lopenblas
+
+maria:./test/maria.cpp ./includes/RNNDescent.cpp
+	$(CXX) $(CXXFLAGS) -o maria ./test/maria.cpp ./includes/RNNDescent.cpp -lopenblas
 
 
 clean:

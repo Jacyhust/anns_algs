@@ -47,6 +47,7 @@ public:
 
 		knngs.resize(parti.numChunks);
 
+//#pragma omp parallel for schedule(dynamic)
 		for (int i = parti.numChunks - 1; i >= 0; --i) {
 			//if (parti.EachParti[i].size() < para.S) {
 			//	int num = parti.EachParti[i].size();
@@ -71,7 +72,7 @@ public:
 			rnndescent::MatrixOracle<float, rnndescent::metric::ip> oracle(base_data);
 			std::unique_ptr<rnndescent::RNNDescent> index(new rnndescent::RNNDescent(oracle, para));
 			//auto start = chrono::high_resolution_clock::now();
-			index->build(oracle.size(), true);
+			index->build(oracle.size(), 0);
 			//auto end = chrono::high_resolution_clock::now();
 			/*cout << "Elapsed time in milliseconds: "
 				<< 1.0 * std::chrono::duration_cast<chrono::milliseconds>(end - start).count() / 1000
@@ -86,6 +87,7 @@ public:
 		lsh::timer timer;
 		timer.restart();
 	
+
 		for (int i = parti.numChunks - 1; i >= 0; --i) {
 			if ((!q->resHeap.empty()) && (1.0f-q->resHeap.top().dist) > 
 				q->norm * (parti.MaxLen[i])) break;

@@ -7,7 +7,7 @@
 #include <queue>
 #include <cfloat>
 
-#define USE_BLAS
+//#define USE_BLAS
 
 //#ifdef USE_BLAS
 #if defined(__GNUC__) && defined(USE_BLAS)
@@ -114,7 +114,7 @@ namespace lsh
 			}
 #else
 
-#pragma omp paralle for
+#pragma omp parallel for schedule(dynamic, 256)
 			for(int i=0;i<hashvals.size();++i){
 				hashvals[i].resize(L,0);
 				for(int j=0;j<L;++j){
