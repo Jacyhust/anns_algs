@@ -83,7 +83,7 @@ public:
 
 	}
 
-	void searchInKnng(std::vector<std::vector<uint32_t>>& apg, std::vector<uint32_t>& ids, queryN* q, int start, int ef) {
+	void searchInKnng(std::vector<std::vector<uint32_t>>& apg, std::vector<int>& ids, queryN* q, int start, int ef) {
 		auto& nngraph = apg;
 		int cost = 0;
 		//std::cout<<"size of knng: "<<nngraph.size()<<std::endl;
@@ -140,8 +140,8 @@ public:
 
 
 			auto& knng = knngs[i];
-
-
+			int ef=200;
+			searchInKnng(knng, parti.EachParti[i], q, 0, ef);
 			////apgs[i] = new hnsw(ips, parti.nums[i], M, ef);
 			//auto& appr_alg = apgs[i];
 			//auto id = parti.EachParti[i][0];
