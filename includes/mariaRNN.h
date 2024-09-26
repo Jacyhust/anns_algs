@@ -3,7 +3,7 @@
 #include <algorithm>
 #include "utils/Preprocess.h"
 #include "srp.h"
-#include "../includes/RNNDescent.h"
+#include "RNNDescent.h"
 
 class mariaV6
 {
@@ -67,20 +67,20 @@ public:
 				q->norm * (parti.MaxLen[i])) break;
 
 
-			//apgs[i] = new hnsw(ips, parti.nums[i], M, ef);
-			auto& appr_alg = apgs[i];
-			auto id = parti.EachParti[i][0];
-			auto data = prep->data.val[id];
-			//appr_alg->addPoint((void*)(data), (size_t)id);
-			//std::mutex inlock;
-			appr_alg->setEf(q->k + 100);
-			auto res = appr_alg->searchKnn(q->queryPoint, q->k);
-			while (!res.empty()) {
-				auto top = res.top();
-				res.pop();
-				q->resHeap.emplace(top.second, top.first);
-				while (q->resHeap.size() > q->k) q->resHeap.pop();
-			}
+			////apgs[i] = new hnsw(ips, parti.nums[i], M, ef);
+			//auto& appr_alg = apgs[i];
+			//auto id = parti.EachParti[i][0];
+			//auto data = prep->data.val[id];
+			////appr_alg->addPoint((void*)(data), (size_t)id);
+			////std::mutex inlock;
+			//appr_alg->setEf(q->k + 100);
+			//auto res = appr_alg->searchKnn(q->queryPoint, q->k);
+			//while (!res.empty()) {
+			//	auto top = res.top();
+			//	res.pop();
+			//	q->resHeap.emplace(top.second, top.first);
+			//	while (q->resHeap.size() > q->k) q->resHeap.pop();
+			//}
 			
 		}
 
@@ -98,9 +98,9 @@ public:
 	//void GetTables(Preprocess& prep);
 	//bool IsBuilt(const std::string& file);
 	~mariaV6() {
-		for (int i = 0; i < parti.numChunks; ++i) {
-			delete apgs[i];
-		}
-		delete[] apgs;
+		//for (int i = 0; i < parti.numChunks; ++i) {
+		//	delete apgs[i];
+		//}
+		//delete[] apgs;
 	}
 };
