@@ -22,7 +22,7 @@ std::string data_fold2 = data_fold + ("MIPS/");
 
 int main(int argc, char* argv[])
 {
-    std::string dataset = "audio";
+    std::string dataset = "audio2";
     if (argc > 1) {
         dataset = argv[1];
     }

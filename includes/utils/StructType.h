@@ -16,8 +16,16 @@ struct Data
 	float* base=nullptr;
 
 	~Data(){
-		delete [] base;
-		//delete [] val;
+		if (base) {
+			delete[] base;
+			base = nullptr;
+		}
+		if (val) {
+			delete[] val;
+			delete val;
+		}
+
+		
 	}
 };
 

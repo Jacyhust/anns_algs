@@ -92,21 +92,19 @@ public:
 
 		queries.N = 200;
 		queries.dim = data.dim;
-
-
 		queries.val = new float* [queries.N];
 		data.val = new float* [data.N];
 
 		//data.offset=data.dim+1;
-		data.base=new float[data.N*data.dim];
-		queries.base=new float[queries.N*queries.dim];
+		data.base = new float[data.N * data.dim];
+		queries.base = new float[queries.N * queries.dim];
 
 		for (int i = 0; i < queries.N; ++i) {
 			// queries.val[i] = new float[queries.dim + 1];
 			// in.read((char*)queries.val[i], sizeof(float) * header[2]);
 			// queries.val[i][queries.dim - 1] = 0.0f;
 
-			queries.val[i] = queries.base+i*queries.dim;
+			queries.val[i] = queries.base + i * queries.dim;
 			in.read((char*)queries.val[i], sizeof(float) * header[2]);
 		}
 
@@ -115,7 +113,7 @@ public:
 			// in.read((char*)data.val[i], sizeof(float) * header[2]);
 			// data.val[i][data.dim - 1] = 0.0f;
 
-			data.val[i] = data.base+i*data.dim;
+			data.val[i] = data.base + i * data.dim;
 			in.read((char*)data.val[i], sizeof(float) * header[2]);
 		}
 		
@@ -129,9 +127,7 @@ public:
 
 	void cal_SquareLen(){
 		SquareLen = new float[data.N];
-		for (int i = 0; i < data.N; ++i) {
-			SquareLen[i] = cal_inner_product(data.val[i], data.val[i], data.dim);
-		}
+		for (int i = 0; i < data.N; ++i) SquareLen[i] = cal_inner_product(data.val[i], data.val[i], data.dim);
 
 		MaxLen = *std::max_element(SquareLen, SquareLen + data.N);
 	}
