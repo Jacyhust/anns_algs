@@ -58,11 +58,15 @@ int main(int argc, char* argv[])
     int cost = 0;
 
     auto& queries = prep.queries;
-    queryN** qs = new queryN * [queries.N];
+    
     queries.N = 100;
-    std::cout << "nq= " << queries.N << std::endl;
-    for (int i = 0; i < queries.N; ++i) {
-        qs[i] = new queryN(0, c_, k_, queries[i], queries.dim, 1.0f);
+    int repeat=100;
+    int nq=queries.N*repeat;
+    queryN** qs = new queryN * [nq];
+    std::cout << "nq= " << nq << std::endl;
+    for (int i = 0; i < nq; ++i) {
+        qs[i] = new queryN(0, c_, k_, queries[i%(queries.N)], queries.dim, 1.0f);
+        //qs[i] = new queryN(0, c_, k_, prep.data[i], queries.dim, 1.0f);
     }
 
     // for(auto&x:nngraph){
@@ -70,20 +74,23 @@ int main(int argc, char* argv[])
     // }
 
     timer11.restart();
-    for (int i = 0; i < queries.N; ++i) {
+
+#pragma omp parallel for schedule(dynamic)
+    for (int i = 0; i < nq; ++i) {
         mariaV6.knn(qs[i]);
     }
-    std::cout << "Query1 Time= " << (float)(timer11.elapsed() * 1000) / (prep.queries.N)
+    float tt=(float)(timer11.elapsed() * 1000) / (nq);
+    std::cout << "Query1 Time= " << (float)(timer11.elapsed() * 1000)
         << " ms." << std::endl;
 
 
-    for (int i = 0; i < prep.queries.N; ++i) {
+    for (int i = 0; i < nq; ++i) {
         cost += qs[i]->cost;
         for (int k = 0; k < k_; ++k) {
-            ratio += sqrt(qs[i]->res[k].dist) / prep.benchmark.innerproduct[i][k];
+            ratio += sqrt(qs[i]->res[k].dist) / prep.benchmark.innerproduct[i%(queries.N)][k];
             //ratio+=(q.res[k].dist)/prep.benchmark.indice[i][k];
             for (int l = 0; l < k_; ++l) {
-                if (qs[i]->res[k].id == prep.benchmark.indice[i][l]) {
+                if (qs[i]->res[k].id == prep.benchmark.indice[i%(queries.N)][l]) {
                     recall++;
                     break;
                 }
@@ -94,10 +101,13 @@ int main(int argc, char* argv[])
 
 
     auto times11 = timer.elapsed();
-    std::cout << "Recall= " << (float)recall / (prep.queries.N * k_) << std::endl;
-    std::cout << "Ratio = " << (float)ratio / (prep.queries.N * k_) << std::endl;
-    std::cout << "Cost  = " << (float)cost / (prep.queries.N) << std::endl;
-    std::cout << "Query1 Time= " << (float)(timer11.elapsed() * 1000) / (prep.queries.N) << " ms." << std::endl;
+    std::cout << "Recall= " << (float)recall / (nq * k_) << std::endl;
+    std::cout << "Ratio = " << (float)ratio / (nq * k_) << std::endl;
+    std::cout << "Cost  = " << (float)cost / (nq) << std::endl;
+    
+    std::cout << "QPS  = " << (float)1000 / (tt) << std::endl;
+    tt=(float)(timer11.elapsed() * 1000) / (nq);
+    std::cout << "TPQ= " << tt << " ms." << std::endl;
 
     return 0;
 }

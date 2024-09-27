@@ -304,6 +304,7 @@ namespace rnndescent
     void RNNDescent::extract_index_graph(std::vector<std::vector<unsigned>> &idx_graph)
     {
         auto n{ntotal};
+        //if(n<400) 
         printf("n = %d\n", n);
         idx_graph.clear();
         idx_graph.resize(n);

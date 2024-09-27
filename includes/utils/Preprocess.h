@@ -22,7 +22,7 @@
 #define CANDIDATES 100
 // #define E 2.718281746
 // #define PI 3.1415926
-#define MAXSIZE 4096
+#define MAXSIZE 409600
 
 //#define min(a,b)           (((a) < (b)) ? (a) : (b))
 
@@ -242,6 +242,7 @@ class Partition
 {
 private:
 	float ratio;
+
 	void make_chunks_fargo(Preprocess& prep){
 		std::vector<Dist_id> distpairs;
 		std::vector<int> bucket;
@@ -356,7 +357,7 @@ public:
 	}
 
 	Partition(float c_, Preprocess& prep){
-		ratio = 0.95;
+		ratio = 0.98;
 		float c0_ = 1.5f;
 		
 		make_chunks_fargo(prep);

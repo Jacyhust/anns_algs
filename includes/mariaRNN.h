@@ -47,7 +47,7 @@ public:
 
 		knngs.resize(parti.numChunks);
 
-//#pragma omp parallel for schedule(dynamic)
+// #pragma omp parallel for schedule(dynamic)
 		for (int i = parti.numChunks - 1; i >= 0; --i) {
 			//if (parti.EachParti[i].size() < para.S) {
 			//	int num = parti.EachParti[i].size();
@@ -69,8 +69,10 @@ public:
 
 			rnndescent::Matrix<float> base_data;
 			base_data.load(parti.EachParti[i], data.base, data.dim);
-			rnndescent::MatrixOracle<float, rnndescent::metric::ip> oracle(base_data);
+			//rnndescent::MatrixOracle<float, rnndescent::metric::ip> oracle(base_data);
+			rnndescent::MatrixOracle<float, rnndescent::metric::l2> oracle(base_data);
 			std::unique_ptr<rnndescent::RNNDescent> index(new rnndescent::RNNDescent(oracle, para));
+			
 			//auto start = chrono::high_resolution_clock::now();
 			index->build(oracle.size(), 0);
 			//auto end = chrono::high_resolution_clock::now();
@@ -95,7 +97,7 @@ public:
 		int n = nngraph.size();
 		std::vector<bool> visited(n, false);
 		visited[start] = true;
-		float dist = calInnerProductReverse(q->queryPoint, data[start], data.dim);
+		float dist = calInnerProductReverse(q->queryPoint, data[ids[start]], data.dim);
 		cost++;
 		accessed_candidates.emplace(start, -dist);
 		top_candidates.emplace(ids[start], dist);
@@ -108,7 +110,7 @@ public:
 			for (auto& u : nngraph[top.id]) {
 				if (visited[u]) continue;
 				visited[u] = true;
-				dist = calInnerProductReverse(q->queryPoint, data[start], data.dim);
+				dist = calInnerProductReverse(q->queryPoint, data[ids[u]], data.dim);
 				cost++;
 				accessed_candidates.emplace(u, -dist);
 				top_candidates.emplace(ids[u], dist);
@@ -116,7 +118,7 @@ public:
 			}
 		}
 
-		//while (top_candidates.size() > q->k) top_candidates.pop();
+		while (top_candidates.size() > q->k) top_candidates.pop();
 
 		//q->resHeap
 		//q->res.resize(q->k);
@@ -135,24 +137,29 @@ public:
 		
 		int ef = 200;
 		for (int i = parti.numChunks - 1; i >= 0; --i) {
-			if ((!q->resHeap.empty()) && (1.0f-q->resHeap.top().dist) > 
-				q->norm * (parti.MaxLen[i])) break;
+			if ((!q->resHeap.empty()) && (-(q->resHeap.top().dist)) > 
+				q->norm * sqrt(parti.MaxLen[i])) break;
 
 			if (parti.EachParti[i].size() < 400) {
+				// std::cout<<i<<","<<parti.EachParti[i].size()<<"..."<<std::endl;
+				// exit(-1);
 				auto& top_candidates = q->resHeap;
 				for (auto& x : parti.EachParti[i]) {
 					float dist = calInnerProductReverse(q->queryPoint, data[x], data.dim);
 
 					top_candidates.emplace(x, dist);
-					if (top_candidates.size() > ef) top_candidates.pop();
+					if (top_candidates.size() > q->k) top_candidates.pop();
 				}
-
+				q->cost+=parti.EachParti[i].size();
 				continue;
 			}
 
+			//continue;
 			auto& knng = knngs[i];
 			
 			searchInKnng(knng, parti.EachParti[i], q, 0, ef);
+
+			//break;
 			////apgs[i] = new hnsw(ips, parti.nums[i], M, ef);
 			//auto& appr_alg = apgs[i];
 			//auto id = parti.EachParti[i][0];
@@ -171,7 +178,7 @@ public:
 		}
 
 		auto& top_candidates = q->resHeap;
-		while (top_candidates.size() > q->k) top_candidates.pop();
+		
 		q->res.resize(q->k);
 		int pos = q->k;
 		while (!top_candidates.empty()) {

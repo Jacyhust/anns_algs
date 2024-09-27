@@ -9,6 +9,8 @@
 #include "../includes/alg.h"
 #include "../includes/indexDescdent.hpp"
 
+
+
 using namespace std;
 
 void stat(const vector<vector<unsigned>> &graph)
