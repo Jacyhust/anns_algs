@@ -31,6 +31,7 @@ namespace lsh
 		
 		std::vector<std::vector<uint32_t>> hashvals;
 		std::vector<std::vector<srpPair>> hash_tables;
+		Data data;
 		float* rndAs=nullptr;
 		int dim=0;
 		// Number of hash functions
@@ -44,7 +45,8 @@ namespace lsh
 
 		srp()=default;
 
-		srp(Data& data, std::vector<std::vector<int>>& part_map, int N_,int dim_,int L_,int K_){
+		srp(Data& data_, std::vector<std::vector<int>>& part_map, int N_,int dim_,int L_,int K_){
+			data = data_;
 			//N=N_;
 			dim=dim_;
 			L=L_;
@@ -137,13 +139,15 @@ namespace lsh
 		}
 
 		void GetTables(std::vector<std::vector<int>>& part_map){
-			int num_parti=part_map.size();
-			hash_tables.resize(num_parti*L);
-			for(int i=0;i<num_parti;++i){
-				auto& part=part_map[i];
-				for(auto& id:part){
-					for(int j=0;j<L;++j){
-						hash_tables[i*L+j].emplace_back(id,hashvals[id][j]);
+			int num_parti = part_map.size();
+			hash_tables.resize(num_parti * L);
+			for (int i = 0; i < num_parti; ++i) {
+				auto& part = part_map[i];
+				//for (auto& id : part) {
+				for (int l = 0; l < part.size(); ++l){
+					int id = part[l];
+					for (int j = 0; j < L; ++j) {
+						hash_tables[i * L + j].emplace_back(l, hashvals[id][j]);
 					}
 				}
 			}
@@ -164,6 +168,55 @@ namespace lsh
 
 			for(auto& table:hash_tables){
 				std::sort(table.begin(),table.end());
+			}
+		}
+
+		void kjoin(std::vector<std::vector<Res>>& knns, std::vector<int>& ids, int np, int K, int width) {
+			int n = hash_tables[np * L].size();
+			if (n < 2 * width) {
+				std::cerr << "The hash table has not enough points!" << std::endl;
+				return;
+			}
+			knns.resize(n);
+			for (auto& nnset : knns) nnset.reserve(2 * width * L);
+
+			for (int i = np * L; i < np * L + L; ++i) {
+				auto& table = hash_tables[i];
+				for (int j = 0; j < width; ++j) {
+					for (int l = 0; l < j + width; ++l) {
+						if (j != l)knns[table[j].id].emplace_back(table[l].id);
+					}
+
+				}
+				for (int j = width; j < n - width; ++j) {
+					for (int l = j - width; l < j + width; ++l) {
+						if (j != l)knns[table[j].id].emplace_back(table[l].id);
+					}
+
+				}
+				for (int j = n-width; j < n; ++j) {
+					for (int l = j - width; l < n; ++l) {
+						if (j != l)knns[table[j].id].emplace_back(table[l].id);
+					}
+
+				}
+			}
+
+#pragma omp parallel for schedule(dynamic)
+			for (auto& pool : knns) pool.erase(std::unique(pool.begin(), pool.end(), compareId), pool.end());
+
+#pragma omp parallel for schedule(dynamic)
+			for (int i = 0; i < knns.size(); ++i) {
+				auto& pool = knns[i];
+				for (auto& x : pool) {
+					x.dist = calInnerProductReverse(data[ids[x.id]], data[ids[i]], dim);
+				}
+			}
+
+#pragma omp parallel for schedule(dynamic)
+			for (auto& pool : knns) {
+				std::sort(pool.begin(), pool.end());
+				if (pool.size() > K) pool.resize(K);
 			}
 		}
 	};

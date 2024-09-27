@@ -13,6 +13,7 @@
 #include <iterator>
 #include <mutex>
 #include "utils/basis.h"
+#include "srp.h"
 #include "utils/StructType.h"
 
 namespace rnnd
@@ -118,7 +119,7 @@ namespace rnnd
             gen_random(rng, nn_new.data(), (int)nn_new.size(), N);
         }
 
-        Nhood& operator=(const Nhood& other)
+        Nhood& operator=(const Nhood& other) 
         {
             M = other.M;
             std::copy(
@@ -260,6 +261,54 @@ namespace rnnd
             }
         }
 
+        /// Initialize the KNN graph randomly
+        void init_graph(std::vector<std::vector<Res>>& init_nns)
+        {
+            graph.reserve(ntotal);
+            {
+                std::mt19937 rng(random_seed * 6007);
+                for (int i = 0; i < ntotal; i++)
+                {
+                    graph.emplace_back(L, S, rng, (int)ntotal);
+                    // graph.push_back(Nhood(L, S, rng, (int)ntotal));
+                }
+            }
+
+#pragma omp parallel
+            {
+                std::mt19937 rng(random_seed * 7741 + omp_get_thread_num());
+#pragma omp for
+                for (int i = 0; i < ntotal; i++){
+                    for (auto& x : init_nns[i]) {
+                        graph[i].pool.emplace_back(x.id, x.dist, true);
+                        std::make_heap(graph[i].pool.begin(), graph[i].pool.end());
+                        graph[i].pool.reserve(L);
+                    }
+                }
+                //for (int i = 0; i < ntotal; i++)
+                //{
+                //    std::vector<int> tmp(S);
+
+                //    gen_random_rnn(rng, tmp.data(), S, ntotal);
+
+                //    for (int j = 0; j < S; j++)
+                //    {
+                //        int id = tmp[j];
+                //        if (id == i)
+                //            continue;
+
+
+                //        //float dist = matrixOracle(i, id);
+                //        float dist = dist_t(data[i], data[id], data.dim);
+
+                //        graph[i].pool.emplace_back(id, dist, true);
+                //    }
+                //    std::make_heap(graph[i].pool.begin(), graph[i].pool.end());
+                //    graph[i].pool.reserve(L);
+                //}
+            }
+        }
+
         void update_neighbors() {
 #pragma omp parallel for schedule(dynamic, 256)
             for (int u = 0; u < ntotal; ++u)
@@ -334,6 +383,58 @@ namespace rnnd
 
             ntotal = n;
             init_graph();
+
+            for (int t1 = 0; t1 < T1; ++t1)
+            {
+                if (verbose)
+                {
+                    std::cout << "Iter " << t1 << " : " << std::flush;
+                }
+                for (int t2 = 0; t2 < T2; ++t2)
+                {
+                    update_neighbors();
+                    if (verbose)
+                    {
+                        std::cout << "#" << std::flush;
+                    }
+                }
+
+                if (t1 != T1 - 1)
+                {
+                    add_reverse_edges();
+                }
+
+                if (verbose)
+                {
+                    printf("\n");
+                }
+            }
+
+#pragma omp parallel for
+            for (int u = 0; u < n; ++u)
+            {
+                auto& pool = graph[u].pool;
+                std::sort(pool.begin(), pool.end());
+                pool.erase(std::unique(pool.begin(), pool.end(),
+                    [](Neighbor& a,
+                        Neighbor& b)
+                    {
+                        return a.id == b.id;
+                    }),
+                    pool.end());
+            }
+
+            has_built = true;
+        }
+
+        void build(const int n, bool verbose,std::vector<std::vector<Res>>& init_nns) {
+            if (verbose)
+            {
+                printf("Parameters: S=%d, R=%d, T1=%d, T2=%d\n", S, R, T1, T2);
+            }
+
+            ntotal = n;
+            init_graph(init_nns);
 
             for (int t1 = 0; t1 < T1; ++t1)
             {

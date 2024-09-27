@@ -6,8 +6,8 @@
 //#include "../includes/RNNDescent.h"
 //#include "../includes/utils/io.hpp"
 #include "../includes/utils/StructType.h"
-
 #include "../includes/mariaRNN.h"
+#include "../includes/utils/performance.h"
 
 #if defined(unix) || defined(__unix__)
 //std::string data_fold = "/home/xizhao/dataset/", index_fold = " ";
@@ -46,6 +46,7 @@ int main(int argc, char* argv[])
     Preprocess prep(data_fold1 + (argvStr[1]), data_fold2 + (argvStr[3]));
     Partition parti(c, prep);
     mariaV6 mariaV6(prep.data, parti, L, K);
+    mariaV7 mariaV7(prep.data, parti, L, K);
 
     float c_ = 0.5;
     int k_ = 50;
@@ -60,54 +61,62 @@ int main(int argc, char* argv[])
     auto& queries = prep.queries;
     
     queries.N = 100;
-    int repeat=100;
-    int nq=queries.N*repeat;
-    queryN** qs = new queryN * [nq];
+    int repeat=1;
+    int nq = queries.N * repeat;
+
+    std::vector<queryN> qs;
+    qs.reserve(nq);
+    //queryN** qs = new queryN * [nq];
     std::cout << "nq= " << nq << std::endl;
     for (int i = 0; i < nq; ++i) {
-        qs[i] = new queryN(0, c_, k_, queries[i%(queries.N)], queries.dim, 1.0f);
+        //qs[i] = new queryN(i % (queries.N), c_, k_, queries[i % (queries.N)], queries.dim, 1.0f);
         //qs[i] = new queryN(0, c_, k_, prep.data[i], queries.dim, 1.0f);
+        qs.emplace_back(i % (queries.N), c_, k_, queries[i % (queries.N)], queries.dim, 1.0f);
     }
 
     // for(auto&x:nngraph){
     //   if(x.size()>M)x.resize(M);
     // }
+    std::vector<resOutput> res;
 
-    timer11.restart();
-
-#pragma omp parallel for schedule(dynamic)
-    for (int i = 0; i < nq; ++i) {
-        mariaV6.knn(qs[i]);
-    }
-    float tt=(float)(timer11.elapsed() * 1000) / (nq);
-    std::cout << "Query1 Time= " << (float)(timer11.elapsed() * 1000)
-        << " ms." << std::endl;
-
-
-    for (int i = 0; i < nq; ++i) {
-        cost += qs[i]->cost;
-        for (int k = 0; k < k_; ++k) {
-            ratio += sqrt(qs[i]->res[k].dist) / prep.benchmark.innerproduct[i%(queries.N)][k];
-            //ratio+=(q.res[k].dist)/prep.benchmark.indice[i][k];
-            for (int l = 0; l < k_; ++l) {
-                if (qs[i]->res[k].id == prep.benchmark.indice[i%(queries.N)][l]) {
-                    recall++;
-                    break;
-                }
-            }
-        }
-    }
-
-
-
-    auto times11 = timer.elapsed();
-    std::cout << "Recall= " << (float)recall / (nq * k_) << std::endl;
-    std::cout << "Ratio = " << (float)ratio / (nq * k_) << std::endl;
-    std::cout << "Cost  = " << (float)cost / (nq) << std::endl;
-    
-    std::cout << "QPS  = " << (float)1000 / (tt) << std::endl;
-    tt=(float)(timer11.elapsed() * 1000) / (nq);
-    std::cout << "TPQ= " << tt << " ms." << std::endl;
+    res.push_back(searchFunction(mariaV6, qs, prep));
+    res.push_back(searchFunction(mariaV7, qs, prep));
+    saveAndShow(c, k_, dataset, res);
+//    timer11.restart();
+//
+//#pragma omp parallel for schedule(dynamic)
+//    for (int i = 0; i < nq; ++i) {
+//        mariaV6.knn(qs[i]);
+//    }
+//    float tt=(float)(timer11.elapsed() * 1000) / (nq);
+//    std::cout << "Query1 Time= " << (float)(timer11.elapsed() * 1000)
+//        << " ms." << std::endl;
+//
+//
+//    for (int i = 0; i < nq; ++i) {
+//        cost += qs[i]->cost;
+//        for (int k = 0; k < k_; ++k) {
+//            ratio += sqrt(qs[i]->res[k].dist) / prep.benchmark.innerproduct[i%(queries.N)][k];
+//            //ratio+=(q.res[k].dist)/prep.benchmark.indice[i][k];
+//            for (int l = 0; l < k_; ++l) {
+//                if (qs[i]->res[k].id == prep.benchmark.indice[i%(queries.N)][l]) {
+//                    recall++;
+//                    break;
+//                }
+//            }
+//        }
+//    }
+//
+//
+//
+//    auto times11 = timer.elapsed();
+//    std::cout << "Recall= " << (float)recall / (nq * k_) << std::endl;
+//    std::cout << "Ratio = " << (float)ratio / (nq * k_) << std::endl;
+//    std::cout << "Cost  = " << (float)cost / (nq) << std::endl;
+//    
+//    std::cout << "QPS  = " << (float)1000 / (tt) << std::endl;
+//    tt=(float)(timer11.elapsed() * 1000) / (nq);
+//    std::cout << "TPQ= " << tt << " ms." << std::endl;
 
     return 0;
 }

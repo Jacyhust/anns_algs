@@ -230,6 +230,10 @@ public:
 
 	~Preprocess(){
 		//clear_2d_array(data.val, data.N);
+		delete[] data.base;
+		delete[] data.val;
+		delete[] queries.base;
+		delete[] queries.val;
 		clear_2d_array(benchmark.indice, benchmark.N);
 		clear_2d_array(benchmark.innerproduct, benchmark.N);
 		delete[] SquareLen;

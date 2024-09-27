@@ -15,18 +15,18 @@ struct Data
 //private:
 	float* base=nullptr;
 
-	~Data(){
-		if (base) {
-			delete[] base;
-			base = nullptr;
-		}
-		if (val) {
-			delete[] val;
-			val = nullptr;
-		}
+	//~Data(){
+	//	if (base) {
+	//		delete[] base;
+	//		base = nullptr;
+	//	}
+	//	if (val) {
+	//		delete[] val;
+	//		val = nullptr;
+	//	}
 
-		
-	}
+	//	
+	//}
 };
 
 struct Ben
@@ -70,3 +70,18 @@ struct tPoints {
 	int u;
 	int v;
 };
+
+struct resOutput
+{
+	std::string algName;
+	int L;
+	int K;
+	float c;
+	float time;
+	float recall;
+	float ratio;
+	float cost;
+	float kRatio;
+	float qps = 0;
+};
+
