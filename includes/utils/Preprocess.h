@@ -361,7 +361,7 @@ public:
 	}
 
 	Partition(float c_, Preprocess& prep){
-		ratio = 0.98;
+		ratio = 0.9;
 		float c0_ = 1.5f;
 		
 		make_chunks_fargo(prep);
