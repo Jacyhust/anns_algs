@@ -36,7 +36,7 @@ public:
 		para.T2 = 8;
 
 		lsh::timer timer;
-		std::cout << "CONSTRUCTING GRAPH..." << std::endl;
+		std::cout << "CONSTRUCTING MARIAV6..." << std::endl;
 		timer.restart();
 		buildIndex();
 		std::cout << "CONSTRUCTING TIME: " << timer.elapsed() << "s." << std::endl << std::endl;
@@ -232,10 +232,10 @@ public:
 		//const int min_size = 400;
 		para.S = 36;
 		para.T1 = 2;
-		para.T2 = 8;
+		para.T2 = 4;
 
 		lsh::timer timer;
-		std::cout << "CONSTRUCTING GRAPH..." << std::endl;
+		std::cout << "CONSTRUCTING MARIAV7..." << std::endl;
 		timer.restart();
 		buildIndex();
 		std::cout << "CONSTRUCTING TIME: " << timer.elapsed() << "s." << std::endl << std::endl;

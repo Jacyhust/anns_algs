@@ -28,9 +28,7 @@
 extern std::string data_fold, index_fold;
 extern std::string data_fold1, data_fold2;
 
-#if defined(unix) || defined(__unix__)
-inline void localtime_s(tm* ltm, time_t* now) {}
-#endif
+
 
 template <typename algorithm,typename Preprocess>
 inline resOutput Alg0_maria(algorithm& maria, float c_, int m_, int k_, int L_, int K_, Preprocess& prep)

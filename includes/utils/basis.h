@@ -406,6 +406,15 @@ namespace threadPoollib
 	};
 }
 
+#if defined(unix) || defined(__unix__)
+inline void localtime_s(tm* result, time_t* time) {
+	if (localtime_r(time, result) == nullptr) {
+        std::cerr << "Error converting time." << std::endl;
+        std::memset(result, 0, sizeof(struct tm)); 
+    }
+}
+#endif
+
 inline void saveAndShow(float c, int k, std::string& dataset, std::vector<resOutput>& res)
 {
 	time_t now = time(0);
@@ -455,17 +464,10 @@ inline void saveAndShow(float c, int k, std::string& dataset, std::vector<resOut
 			<< std::setw(12) << res[i].cost
 			<< std::endl;
 	}
-#if defined(unix) || defined(__unix__)
-	ss << "\n******************************************************************************************************\n"
-		<< "                                                                                    "
-		<< lt.date << '-' << lt.h << ':' << lt.m << ':' << lt.s
-		<< "\n******************************************************************************************************\n\n\n";
-#else
 	ss << "\n******************************************************************************************************\n"
 		<< "                                                                                    "
 		<< ltm->tm_mon + 1 << '-' << ltm->tm_mday << ' ' << ltm->tm_hour << ':' << ltm->tm_min
 		<< "\n*****************************************************************************************************\n\n\n";
-#endif
 	std::cout << ss.str();
 	os << ss.str();
 	os.close();  delete[]ltm;
