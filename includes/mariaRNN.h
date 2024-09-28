@@ -257,11 +257,12 @@ public:
 
 			for (int j = 0; j < parti.EachParti[i].size(); ++j) {
 				auto& id = parti.EachParti[i][j];
-				data_in_block.val[i] = data[id];
+				data_in_block.val[j] = data[id];
 			}
 			srp.kjoin(knns, parti.EachParti[i], i, para.S, 20);
 			rnnd::RNNDescent index(data_in_block, para);
-			index.build(data_in_block.N, 0);
+			//index.build(data_in_block.N, 0);
+			index.build(data_in_block.N, 0, knns);
 			index.extract_index_graph(knngs[i]);
 		}
 

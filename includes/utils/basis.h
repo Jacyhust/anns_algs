@@ -46,7 +46,7 @@ struct Res//the result of knns
 	}
 };
 
-bool compareId(const Res& a, const Res& b) {
+inline bool compareId(const Res& a, const Res& b) {
 	return a.id == b.id;
 }
 

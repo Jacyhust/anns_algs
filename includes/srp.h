@@ -184,19 +184,19 @@ namespace lsh
 				auto& table = hash_tables[i];
 				for (int j = 0; j < width; ++j) {
 					for (int l = 0; l < j + width; ++l) {
-						if (j != l)knns[table[j].id].emplace_back(table[l].id);
+						if (j != l)knns[table[j].id].emplace_back(table[l].id, 1.0f);
 					}
 
 				}
 				for (int j = width; j < n - width; ++j) {
 					for (int l = j - width; l < j + width; ++l) {
-						if (j != l)knns[table[j].id].emplace_back(table[l].id);
+						if (j != l)knns[table[j].id].emplace_back(table[l].id, 1.0f);
 					}
 
 				}
 				for (int j = n-width; j < n; ++j) {
 					for (int l = j - width; l < n; ++l) {
-						if (j != l)knns[table[j].id].emplace_back(table[l].id);
+						if (j != l)knns[table[j].id].emplace_back(table[l].id, 1.0f);
 					}
 
 				}
