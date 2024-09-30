@@ -13,6 +13,7 @@ private:
 	Partition parti;
 	std::vector<std::vector<std::vector<uint32_t>>> knngs;
 	rnndescent::rnn_para para;
+	std::atomic<size_t> cost{0};
 	int* link_lists = nullptr;
 	Data data;
 public:
@@ -31,9 +32,9 @@ public:
 		L = L_;
 		K = K_;
 		//const int min_size = 400;
-		para.S = 6;
-		para.T1 = 5;
-		para.T2 = 8;
+		para.S = 36;
+		para.T1 = 2;
+		para.T2 = 4;
 
 		lsh::timer timer;
 		std::cout << "CONSTRUCTING MARIAV6..." << std::endl;
@@ -81,9 +82,13 @@ public:
 				<< 1.0 * std::chrono::duration_cast<chrono::milliseconds>(end - start).count() / 1000
 				<< " s" << endl;*/
 			index->extract_index_graph(knngs[i]);
-
+			cost+=index->cost;
 			//break;
 		}
+
+		cost+=srp.getCost();
+
+		std::cout << "CONSTRUCTING COST: " << (float)cost/N << std::endl;
 
 
 	}
@@ -163,7 +168,7 @@ public:
 			
 			searchInKnng(knng, parti.EachParti[i], q, 0, ef);
 
-			//break;
+			break;
 			////apgs[i] = new hnsw(ips, parti.nums[i], M, ef);
 			//auto& appr_alg = apgs[i];
 			//auto id = parti.EachParti[i][0];
@@ -214,6 +219,7 @@ private:
 	rnnd::rnn_para para;
 	int* link_lists = nullptr;
 	Data data;
+	std::atomic<size_t> cost{0};
 public:
 	int N;
 	int dim;
@@ -260,13 +266,32 @@ public:
 				data_in_block.val[j] = data[id];
 			}
 			srp.kjoin(knns, parti.EachParti[i], i, para.S, 20);
+
+			
+
 			rnnd::RNNDescent index(data_in_block, para);
 			//index.build(data_in_block.N, 0);
 			index.build(data_in_block.N, 0, knns);
 			index.extract_index_graph(knngs[i]);
+
+			cost+=index.cost;
 		}
 
+		std::cout << "CONSTRUCTING COST: " << (float)cost/N << std::endl;
 
+		cost+=srp.getCost();
+
+		std::cout << "CONSTRUCTING COST: " << (float)cost/N << std::endl;
+	}
+
+	void bruteForce(std::vector<std::vector<Res>>& knns, std::vector<int>& ids,int K){
+		int n=ids.size();
+		knns.resize(n);
+		for(auto& s:knns) s.reserve(n-1);
+
+		for(int i=0;i<n;++i){
+
+		}
 	}
 
 	void searchInKnng(std::vector<std::vector<uint32_t>>& apg, std::vector<int>& ids, queryN* q, int start, int ef) {
@@ -335,6 +360,7 @@ public:
 					if (top_candidates.size() > q->k) top_candidates.pop();
 				}
 				q->cost += parti.EachParti[i].size();
+				//break;
 				continue;
 			}
 
@@ -343,7 +369,7 @@ public:
 
 			searchInKnng(knng, parti.EachParti[i], q, 0, ef);
 
-			//break;
+			break;
 			////apgs[i] = new hnsw(ips, parti.nums[i], M, ef);
 			//auto& appr_alg = apgs[i];
 			//auto id = parti.EachParti[i][0];

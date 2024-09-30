@@ -113,6 +113,9 @@ namespace rnndescent
                     if (id == i)
                         continue;
                     float dist = matrixOracle(i, id);
+                    #if defined(COUNT_CC)
+                            cost++;
+                    #endif
                     graph[i].pool.emplace_back(id, dist, true);
                 }
                 std::make_heap(graph[i].pool.begin(), graph[i].pool.end());
@@ -170,6 +173,9 @@ namespace rnndescent
                         break;
                     }
                     float distance = matrixOracle(nn.id, other_nn.id);
+                    #if defined(COUNT_CC)
+                            cost++;
+                    #endif
                     if (distance < nn.distance)
                     {
                         ok = false;

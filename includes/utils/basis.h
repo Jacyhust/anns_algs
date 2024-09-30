@@ -23,6 +23,8 @@
 #include "patch_ubuntu.h"
 #include "StructType.h"
 
+//#define COUNT_CC
+
 struct Res//the result of knns
 {
 	//dist can be:

@@ -191,7 +191,8 @@ namespace rnnd
 
     //template <DISTFUNC dist_t>
 
-#define dist_t cal_inner_product
+//#define dist_t cal_inner_product
+#define dist_t calInnerProductReverse
 
     struct RNNDescent
     {
@@ -201,6 +202,8 @@ namespace rnnd
         using KNNGraph = std::vector<Nhood>;
 
         Data data;
+        std::atomic<size_t> cost{0};
+
         explicit RNNDescent(Data& data_, rnn_para const& p) {
             data = data_;
             ntotal = data.N;
@@ -252,7 +255,7 @@ namespace rnnd
 
                         //float dist = matrixOracle(i, id);
                         float dist = dist_t(data[i], data[id], data.dim);
-
+                        cost++;
                         graph[i].pool.emplace_back(id, dist, true);
                     }
                     std::make_heap(graph[i].pool.begin(), graph[i].pool.end());
@@ -350,6 +353,9 @@ namespace rnnd
                         //float distance = matrixOracle(nn.id, other_nn.id);
 
                         float distance = dist_t(data[nn.id], data[other_nn.id], data.dim);
+                        #if defined(COUNT_CC)
+                            cost++;
+                        #endif
                         if (distance < nn.distance)
                         {
                             ok = false;

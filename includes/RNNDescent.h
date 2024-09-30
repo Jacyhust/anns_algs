@@ -1,5 +1,5 @@
 #pragma once
-
+#include <mutex>
 #include <vector>
 #include <queue>
 
@@ -33,7 +33,7 @@ namespace rnndescent
     {
         IndexOracle const &matrixOracle;
         using storage_idx_t = int;
-
+        std::atomic<size_t> cost{0};
         using KNNGraph = std::vector<Nhood>;
 
         explicit RNNDescent(IndexOracle const &mo, rnn_para const &p);

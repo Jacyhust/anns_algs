@@ -32,6 +32,7 @@ namespace lsh
 		std::vector<std::vector<uint32_t>> hashvals;
 		std::vector<std::vector<srpPair>> hash_tables;
 		Data data;
+		std::atomic<size_t> cost{0};
 		float* rndAs=nullptr;
 		int dim=0;
 		// Number of hash functions
@@ -42,6 +43,9 @@ namespace lsh
 		int K=0;
 
 	public:
+		size_t getCost(){
+			return cost;
+		}
 
 		srp()=default;
 
@@ -180,6 +184,8 @@ namespace lsh
 			knns.resize(n);
 			for (auto& nnset : knns) nnset.reserve(2 * width * L);
 
+
+
 			for (int i = np * L; i < np * L + L; ++i) {
 				auto& table = hash_tables[i];
 				for (int j = 0; j < width; ++j) {
@@ -210,6 +216,9 @@ namespace lsh
 				auto& pool = knns[i];
 				for (auto& x : pool) {
 					x.dist = calInnerProductReverse(data[ids[x.id]], data[ids[i]], dim);
+					#if defined(COUNT_CC)
+                            cost++;
+					#endif
 				}
 			}
 
