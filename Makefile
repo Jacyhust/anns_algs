@@ -49,4 +49,4 @@ maria:./test/maria.cpp ./includes/RNNDescent.cpp
 
 
 clean:
-	rm -rf $(TARGET) $(OBJDIR) tb
+	rm -rf $(TARGET) $(OBJDIR) tb srp nnd rnnd maria
