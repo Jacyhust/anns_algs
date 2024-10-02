@@ -8,30 +8,33 @@
 
 class mariaV6
 {
-private:
+	private:
 	std::string index_file;
 	Partition parti;
 	std::vector<std::vector<std::vector<uint32_t>>> knngs;
 	rnndescent::rnn_para para;
-	std::atomic<size_t> cost{0};
+	std::atomic<size_t> cost{ 0 };
 	int* link_lists = nullptr;
 	Data data;
-public:
+
+	public:
 	int N;
 	int dim;
-	//int S;
+	// int S;
 	int L;
 	int K;
- 
+
 	std::string alg_name = "mariaV6";
-public:
-	mariaV6(Data& data_, Partition& part_, int L_, int K_) :parti(part_) {
+
+	public:
+	mariaV6(Data& data_, Partition& part_, int L_, int K_) : parti(part_)
+	{
 		data = data_;
 		N = data.N;
 		dim = data.dim;
 		L = L_;
 		K = K_;
-		//const int min_size = 400;
+		// const int min_size = 400;
 		para.S = 36;
 		para.T1 = 2;
 		para.T2 = 4;
@@ -40,8 +43,8 @@ public:
 		std::cout << "CONSTRUCTING MARIAV6..." << std::endl;
 		timer.restart();
 		buildIndex();
-		std::cout << "CONSTRUCTING TIME: " << timer.elapsed() << "s." << std::endl << std::endl;
-		
+		std::cout << "CONSTRUCTING TIME: " << timer.elapsed() << "s." << std::endl
+			<< std::endl;
 	}
 
 	void buildIndex() {
@@ -49,55 +52,40 @@ public:
 
 		knngs.resize(parti.numChunks);
 
-// #pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
 		for (int i = parti.numChunks - 1; i >= 0; --i) {
-			//if (parti.EachParti[i].size() < para.S) {
-			//	int num = parti.EachParti[i].size();
-			//	auto& knng = knngs[i];
-			//	knng.resize(num);
-			//	for (int l = 0; l < num; ++l) {
-			//		knng[l].reserve(num - 1);
-			//		for (int j = 0; j < num; ++j) {
-			//			if (l != j) knng[l].emplace_back(j);
-			//		}
-			//	}
-
-			//	continue;
-			//}
-
 			if (parti.EachParti[i].size() < 400) {
 				continue;
 			}
 
 			rnndescent::Matrix<float> base_data;
 			base_data.load(parti.EachParti[i], data.base, data.dim);
-			//rnndescent::MatrixOracle<float, rnndescent::metric::ip> oracle(base_data);
+			// rnndescent::MatrixOracle<float, rnndescent::metric::ip> oracle(base_data);
 			rnndescent::MatrixOracle<float, rnndescent::metric::l2> oracle(base_data);
 			std::unique_ptr<rnndescent::RNNDescent> index(new rnndescent::RNNDescent(oracle, para));
-			
-			//auto start = chrono::high_resolution_clock::now();
+
+			// auto start = chrono::high_resolution_clock::now();
 			index->build(oracle.size(), 0);
-			//auto end = chrono::high_resolution_clock::now();
+			// auto end = chrono::high_resolution_clock::now();
 			/*cout << "Elapsed time in milliseconds: "
 				<< 1.0 * std::chrono::duration_cast<chrono::milliseconds>(end - start).count() / 1000
 				<< " s" << endl;*/
 			index->extract_index_graph(knngs[i]);
-			cost+=index->cost;
-			//break;
+			cost += index->cost;
+			// break;
 		}
 
-		cost+=srp.getCost();
+		cost += srp.getCost();
 
-		std::cout << "CONSTRUCTING COST: " << (float)cost/N << std::endl;
-
-
+		std::cout << "CONSTRUCTING COST: " << (float)cost / N << std::endl;
 	}
 
-	void searchInKnng(std::vector<std::vector<uint32_t>>& apg, std::vector<int>& ids, queryN* q, int start, int ef) {
+	void searchInKnng(std::vector<std::vector<uint32_t>>& apg, std::vector<int>& ids, queryN* q, int start, int ef)
+	{
 		auto& nngraph = apg;
 		int cost = 0;
-		//std::cout<<"size of knng: "<<nngraph.size()<<std::endl;
-		//lsh::timer timer;
+		// std::cout<<"size of knng: "<<nngraph.size()<<std::endl;
+		// lsh::timer timer;
 		std::priority_queue<Res> accessed_candidates;
 
 		auto& top_candidates = q->resHeap;
@@ -110,87 +98,99 @@ public:
 		accessed_candidates.emplace(start, -dist);
 		top_candidates.emplace(ids[start], dist);
 
-		while (!accessed_candidates.empty()) {
+		while (!accessed_candidates.empty())
+		{
 			Res top = accessed_candidates.top();
-			if (-top.dist > top_candidates.top().dist) break;
+			if (-top.dist > top_candidates.top().dist)
+				break;
 			accessed_candidates.pop();
 
-			for (auto& u : nngraph[top.id]) {
-				if (visited[u]) continue;
+			for (auto& u : nngraph[top.id])
+			{
+				if (visited[u])
+					continue;
 				visited[u] = true;
 				dist = calInnerProductReverse(q->queryPoint, data[ids[u]], data.dim);
 				cost++;
 				accessed_candidates.emplace(u, -dist);
 				top_candidates.emplace(ids[u], dist);
-				if (top_candidates.size() > ef) top_candidates.pop();
+				if (top_candidates.size() > ef)
+					top_candidates.pop();
 			}
 		}
 
-		while (top_candidates.size() > q->k) top_candidates.pop();
+		while (top_candidates.size() > q->k)
+			top_candidates.pop();
 
-		//q->resHeap
-		//q->res.resize(q->k);
-		//int pos = q->k;
-		//while (!top_candidates.empty()) {
+		// q->resHeap
+		// q->res.resize(q->k);
+		// int pos = q->k;
+		// while (!top_candidates.empty()) {
 		//	q->res[--pos] = top_candidates.top();
 		//	top_candidates.pop();
-		//}
-		//q->time_total = timer.elapsed();
+		// }
+		// q->time_total = timer.elapsed();
 		q->cost += cost;
 	}
 
-	void knn(queryN* q) {
+	void knn(queryN* q)
+	{
 		lsh::timer timer;
 		timer.restart();
-		
-		int ef = 200;
-		for (int i = parti.numChunks - 1; i >= 0; --i) {
-			if ((!q->resHeap.empty()) && (-(q->resHeap.top().dist)) > 
-				q->norm * sqrt(parti.MaxLen[i])) break;
 
-			if (parti.EachParti[i].size() < 400) {
-				//break;
-				// std::cout<<i<<","<<parti.EachParti[i].size()<<"..."<<std::endl;
-				// exit(-1);
+		int ef = 200;
+		for (int i = parti.numChunks - 1; i >= 0; --i)
+		{
+			if ((!q->resHeap.empty()) && (-(q->resHeap.top().dist)) >
+				q->norm * sqrt(parti.MaxLen[i]))
+				break;
+
+			if (parti.EachParti[i].size() < 400)
+			{
+				// break;
+				//  std::cout<<i<<","<<parti.EachParti[i].size()<<"..."<<std::endl;
+				//  exit(-1);
 				auto& top_candidates = q->resHeap;
-				for (auto& x : parti.EachParti[i]) {
+				for (auto& x : parti.EachParti[i])
+				{
 					float dist = calInnerProductReverse(q->queryPoint, data[x], data.dim);
 
 					top_candidates.emplace(x, dist);
-					if (top_candidates.size() > q->k) top_candidates.pop();
+					if (top_candidates.size() > q->k)
+						top_candidates.pop();
 				}
-				q->cost+=parti.EachParti[i].size();
+				q->cost += parti.EachParti[i].size();
 				continue;
 			}
 
-			//continue;
+			// continue;
 			auto& knng = knngs[i];
-			
+
 			searchInKnng(knng, parti.EachParti[i], q, 0, ef);
 
-			break;
+			// break;
 			////apgs[i] = new hnsw(ips, parti.nums[i], M, ef);
-			//auto& appr_alg = apgs[i];
-			//auto id = parti.EachParti[i][0];
-			//auto data = prep->data.val[id];
+			// auto& appr_alg = apgs[i];
+			// auto id = parti.EachParti[i][0];
+			// auto data = prep->data.val[id];
 			////appr_alg->addPoint((void*)(data), (size_t)id);
 			////std::mutex inlock;
-			//appr_alg->setEf(q->k + 100);
-			//auto res = appr_alg->searchKnn(q->queryPoint, q->k);
-			//while (!res.empty()) {
+			// appr_alg->setEf(q->k + 100);
+			// auto res = appr_alg->searchKnn(q->queryPoint, q->k);
+			// while (!res.empty()) {
 			//	auto top = res.top();
 			//	res.pop();
 			//	q->resHeap.emplace(top.second, top.first);
 			//	while (q->resHeap.size() > q->k) q->resHeap.pop();
-			//}
-			
+			// }
 		}
 
 		auto& top_candidates = q->resHeap;
-		
+
 		q->res.resize(q->k);
 		int pos = q->k;
-		while (!top_candidates.empty()) {
+		while (!top_candidates.empty())
+		{
 			q->res[--pos] = top_candidates.top();
 			top_candidates.pop();
 		}
@@ -198,44 +198,46 @@ public:
 		q->time_total = timer.elapsed();
 	}
 
-
-
-	//void GetTables(Preprocess& prep);
-	//bool IsBuilt(const std::string& file);
-	~mariaV6() {
-		//for (int i = 0; i < parti.numChunks; ++i) {
+	// void GetTables(Preprocess& prep);
+	// bool IsBuilt(const std::string& file);
+	~mariaV6()
+	{
+		// for (int i = 0; i < parti.numChunks; ++i) {
 		//	delete apgs[i];
-		//}
-		//delete[] apgs;
+		// }
+		// delete[] apgs;
 	}
 };
 
 class mariaV7
 {
-private:
+	private:
 	std::string index_file;
 	Partition parti;
 	std::vector<std::vector<std::vector<uint32_t>>> knngs;
 	rnnd::rnn_para para;
 	int* link_lists = nullptr;
 	Data data;
-	std::atomic<size_t> cost{0};
-public:
+	std::atomic<size_t> cost{ 0 };
+
+	public:
 	int N;
 	int dim;
-	//int S;
+	// int S;
 	int L;
 	int K;
 
 	std::string alg_name = "mariaV7";
-public:
-	mariaV7(Data& data_, Partition& part_, int L_, int K_) :parti(part_) {
+
+	public:
+	mariaV7(Data& data_, Partition& part_, int L_, int K_) : parti(part_)
+	{
 		data = data_;
 		N = data.N;
 		dim = data.dim;
 		L = L_;
 		K = K_;
-		//const int min_size = 400;
+		// const int min_size = 400;
 		para.S = 36;
 		para.T1 = 2;
 		para.T2 = 4;
@@ -244,17 +246,243 @@ public:
 		std::cout << "CONSTRUCTING MARIAV7..." << std::endl;
 		timer.restart();
 		buildIndex();
-		std::cout << "CONSTRUCTING TIME: " << timer.elapsed() << "s." << std::endl << std::endl;
+		std::cout << "CONSTRUCTING TIME: " << timer.elapsed() << "s." << std::endl
+			<< std::endl;
+	}
 
+	void buildIndex()
+	{
+		lsh::srp srp(data, parti.EachParti, data.N, data.dim, L, K);
+
+		knngs.resize(parti.numChunks);
+		lsh::timer timer;
+		float time = 0.0f;
+
+#pragma omp parallel for schedule(dynamic)
+		for (int i = parti.numChunks - 1; i >= 0; --i)
+		{
+			if (parti.EachParti[i].size() < 400)
+				continue;
+			Data data_in_block;
+			std::vector<std::vector<Res>> knns;
+			data_in_block.N = parti.EachParti[i].size();
+			data_in_block.dim = data.dim;
+			data_in_block.val = new float* [data_in_block.N];
+
+			for (int j = 0; j < parti.EachParti[i].size(); ++j)
+			{
+				auto& id = parti.EachParti[i][j];
+				data_in_block.val[j] = data[id];
+			}
+			timer.restart();
+			srp.kjoin(knns, parti.EachParti[i], i, para.S, 20);
+			time += timer.elapsed();
+			rnnd::RNNDescent index(data_in_block, para);
+			// index.build(data_in_block.N, 0);
+			index.build(data_in_block.N, 0, knns);
+			index.extract_index_graph(knngs[i]);
+
+			cost += index.cost;
+		}
+
+		// std::cout << "CONSTRUCTING COST: " << (float)cost/N << std::endl;
+		// cost+=srp.getCost();
+		std::cout << "SRP SEARCH COST (s): " << time << std::endl;
+	}
+
+	void searchInKnng(std::vector<std::vector<uint32_t>>& apg, std::vector<int>& ids, queryN* q, int start, int ef)
+	{
+		auto& nngraph = apg;
+		int cost = 0;
+		// std::cout<<"size of knng: "<<nngraph.size()<<std::endl;
+		// lsh::timer timer;
+		std::priority_queue<Res> accessed_candidates;
+
+		auto& top_candidates = q->resHeap;
+
+		int n = nngraph.size();
+		std::vector<bool> visited(n, false);
+		visited[start] = true;
+		float dist = calInnerProductReverse(q->queryPoint, data[ids[start]], data.dim);
+		cost++;
+		accessed_candidates.emplace(start, -dist);
+		top_candidates.emplace(ids[start], dist);
+
+		while (!accessed_candidates.empty())
+		{
+			Res top = accessed_candidates.top();
+			if (-top.dist > top_candidates.top().dist)
+				break;
+			accessed_candidates.pop();
+
+			for (auto& u : nngraph[top.id])
+			{
+				if (visited[u])
+					continue;
+				visited[u] = true;
+				dist = calInnerProductReverse(q->queryPoint, data[ids[u]], data.dim);
+				cost++;
+				accessed_candidates.emplace(u, -dist);
+				top_candidates.emplace(ids[u], dist);
+				if (top_candidates.size() > ef)
+					top_candidates.pop();
+			}
+		}
+
+		while (top_candidates.size() > q->k)
+			top_candidates.pop();
+
+		// q->resHeap
+		// q->res.resize(q->k);
+		// int pos = q->k;
+		// while (!top_candidates.empty()) {
+		//	q->res[--pos] = top_candidates.top();
+		//	top_candidates.pop();
+		// }
+		// q->time_total = timer.elapsed();
+		q->cost += cost;
+	}
+
+	void knn(queryN* q)
+	{
+		lsh::timer timer;
+		timer.restart();
+
+		int ef = 200;
+		for (int i = parti.numChunks - 1; i >= 0; --i)
+		{
+			if ((!q->resHeap.empty()) && (-(q->resHeap.top().dist)) >
+				q->norm * sqrt(parti.MaxLen[i]))
+				break;
+
+			if (parti.EachParti[i].size() < 400)
+			{
+				// std::cout<<i<<","<<parti.EachParti[i].size()<<"..."<<std::endl;
+				// exit(-1);
+				auto& top_candidates = q->resHeap;
+				for (auto& x : parti.EachParti[i])
+				{
+					float dist = calInnerProductReverse(q->queryPoint, data[x], data.dim);
+
+					top_candidates.emplace(x, dist);
+					if (top_candidates.size() > q->k)
+						top_candidates.pop();
+				}
+				q->cost += parti.EachParti[i].size();
+				// break;
+				continue;
+			}
+
+			// continue;
+			auto& knng = knngs[i];
+
+			searchInKnng(knng, parti.EachParti[i], q, 0, ef);
+
+			// break;
+			////apgs[i] = new hnsw(ips, parti.nums[i], M, ef);
+			// auto& appr_alg = apgs[i];
+			// auto id = parti.EachParti[i][0];
+			// auto data = prep->data.val[id];
+			////appr_alg->addPoint((void*)(data), (size_t)id);
+			////std::mutex inlock;
+			// appr_alg->setEf(q->k + 100);
+			// auto res = appr_alg->searchKnn(q->queryPoint, q->k);
+			// while (!res.empty()) {
+			//	auto top = res.top();
+			//	res.pop();
+			//	q->resHeap.emplace(top.second, top.first);
+			//	while (q->resHeap.size() > q->k) q->resHeap.pop();
+			// }
+		}
+
+		auto& top_candidates = q->resHeap;
+
+		q->res.resize(q->k);
+		int pos = q->k;
+		while (!top_candidates.empty())
+		{
+			q->res[--pos] = top_candidates.top();
+			top_candidates.pop();
+		}
+
+		q->time_total = timer.elapsed();
+	}
+
+	// void GetTables(Preprocess& prep);
+	// bool IsBuilt(const std::string& file);
+	~mariaV7()
+	{
+		// for (int i = 0; i < parti.numChunks; ++i) {
+		//	delete apgs[i];
+		// }
+		// delete[] apgs;
+	}
+};
+
+class mariaV8
+{
+	private:
+	std::string index_file;
+	Partition parti;
+	std::vector<std::vector<std::vector<uint32_t>>> knngs;//edges in each block
+	rnnd::rnn_para para;
+	int* link_lists = nullptr;
+	Data data;
+	std::atomic<size_t> cost{ 0 };
+
+	struct block_pairs {
+		int block1_id = -1;
+		int block2_id = -1;
+		int S = 32;
+		int degree = 32;
+
+		block_pairs(int i, int j, int S_, int deg_) :
+			block1_id(i), block2_id(j), S(S_), degree(deg_) {}
+	};
+
+
+	std::vector<block_pairs> conn_blocks;
+	public:
+	int N;
+	int dim;
+	// int S;
+	int L;
+	int K;
+
+	std::string alg_name = "mariaV8";
+
+	public:
+	mariaV8(Data& data_, Partition& part_, int L_, int K_) : parti(part_) {
+		data = data_;
+		N = data.N;
+		dim = data.dim;
+		L = L_;
+		K = K_;
+		// const int min_size = 400;
+		para.S = 36;
+		para.T1 = 2;
+		para.T2 = 4;
+
+		lsh::timer timer;
+		std::cout << "CONSTRUCTING MARIAV7..." << std::endl;
+		timer.restart();
+		buildIndex();
+		std::cout << "CONSTRUCTING TIME: " << timer.elapsed() << "s." << std::endl
+			<< std::endl;
 	}
 
 	void buildIndex() {
 		lsh::srp srp(data, parti.EachParti, data.N, data.dim, L, K);
-
 		knngs.resize(parti.numChunks);
-
+		lsh::timer timer;
+		float time = 0.0f;
+#pragma omp parallel for schedule(dynamic)
 		for (int i = parti.numChunks - 1; i >= 0; --i) {
-			if (parti.EachParti[i].size() < 400) continue;
+			if (parti.EachParti[i].size() < 100) {
+				bfConstruction(i);
+				continue;
+			}
+			//continue;
 			Data data_in_block;
 			std::vector<std::vector<Res>> knns;
 			data_in_block.N = parti.EachParti[i].size();
@@ -265,44 +493,67 @@ public:
 				auto& id = parti.EachParti[i][j];
 				data_in_block.val[j] = data[id];
 			}
-			srp.kjoin(knns, parti.EachParti[i], i, para.S, 20);
-
-			
-
+			timer.restart();
+			srp.kjoin1(knns, parti.EachParti[i], i, para.S, 20);
+			time += timer.elapsed();
 			rnnd::RNNDescent index(data_in_block, para);
-			//index.build(data_in_block.N, 0);
+			// index.build(data_in_block.N, 0);
 			index.build(data_in_block.N, 0, knns);
 			index.extract_index_graph(knngs[i]);
 
-			cost+=index.cost;
+			cost += index.cost;
 		}
 
-		std::cout << "CONSTRUCTING COST: " << (float)cost/N << std::endl;
-
-		cost+=srp.getCost();
-
-		std::cout << "CONSTRUCTING COST: " << (float)cost/N << std::endl;
-	}
-
-	void bruteForce(std::vector<std::vector<Res>>& knns, std::vector<int>& ids,int K){
-		int n=ids.size();
-		knns.resize(n);
-		for(auto& s:knns) s.reserve(n-1);
-
-		for(int i=0;i<n;++i){
+#pragma omp parallel for schedule(dynamic)
+		for (int i = parti.numChunks - 1; i >= 0; --i) {
 
 		}
+
+
+
+		// std::cout << "CONSTRUCTING COST: " << (float)cost/N << std::endl;
+		// cost+=srp.getCost();
+		//std::cout << "SRP SEARCH COST (s): " << time << std::endl;
 	}
 
-	void searchInKnng(std::vector<std::vector<uint32_t>>& apg, std::vector<int>& ids, queryN* q, int start, int ef) {
+	void bfConstruction(int i) {
+		int n = parti.EachParti[i].size();
+		std::vector<std::vector<Res>> nnset(n, std::vector<Res>(n, Res(-1, FLT_MAX)));
+#pragma omp parallel for schedule(dynamic)
+		for (int j = 0;j < n;++j) {
+			for (int l = 0;l < j;++l) {
+				float dist = calInnerProductReverse(data[parti.EachParti[i][j]], data[parti.EachParti[i][l]], data.dim);
+				nnset[j][l] = Res(l, dist);
+				nnset[l][j] = Res(j, dist);
+			}
+		}
+
+		//#pragma omp parallel for schedule(dynamic)
+		for (int j = 0;j < n;++j) {
+			std::sort(nnset[j].begin(), nnset[j].end());
+		}
+		auto& apg = knngs[i];
+		apg.resize(n, std::vector<uint32_t>(para.S));
+		for (int j = 0;j < n;++j) {
+			for (int l = 0;l < para.S;++l) {
+				apg[j][l] = nnset[j][l].id;
+			}
+		}
+
+
+	}
+
+	//np1<np2
+	void interConnection(int np1, int np2) {
+
+	}
+
+	void searchInKnng(std::vector<std::vector<uint32_t>>& apg, std::vector<int>& ids, queryN* q, int start, int ef)
+	{
 		auto& nngraph = apg;
 		int cost = 0;
-		//std::cout<<"size of knng: "<<nngraph.size()<<std::endl;
-		//lsh::timer timer;
 		std::priority_queue<Res> accessed_candidates;
-
 		auto& top_candidates = q->resHeap;
-
 		int n = nngraph.size();
 		std::vector<bool> visited(n, false);
 		visited[start] = true;
@@ -311,87 +562,74 @@ public:
 		accessed_candidates.emplace(start, -dist);
 		top_candidates.emplace(ids[start], dist);
 
-		while (!accessed_candidates.empty()) {
+		while (!accessed_candidates.empty())
+		{
 			Res top = accessed_candidates.top();
-			if (-top.dist > top_candidates.top().dist) break;
+			if (-top.dist > top_candidates.top().dist)
+				break;
 			accessed_candidates.pop();
 
-			for (auto& u : nngraph[top.id]) {
-				if (visited[u]) continue;
+			for (auto& u : nngraph[top.id])
+			{
+				if (visited[u])
+					continue;
 				visited[u] = true;
 				dist = calInnerProductReverse(q->queryPoint, data[ids[u]], data.dim);
 				cost++;
 				accessed_candidates.emplace(u, -dist);
 				top_candidates.emplace(ids[u], dist);
-				if (top_candidates.size() > ef) top_candidates.pop();
+				if (top_candidates.size() > ef)
+					top_candidates.pop();
 			}
 		}
 
-		while (top_candidates.size() > q->k) top_candidates.pop();
-
-		//q->resHeap
-		//q->res.resize(q->k);
-		//int pos = q->k;
-		//while (!top_candidates.empty()) {
-		//	q->res[--pos] = top_candidates.top();
-		//	top_candidates.pop();
-		//}
-		//q->time_total = timer.elapsed();
+		while (top_candidates.size() > q->k)
+			top_candidates.pop();
 		q->cost += cost;
 	}
 
-	void knn(queryN* q) {
+	void knn(queryN* q)
+	{
 		lsh::timer timer;
 		timer.restart();
 
-		int ef = 200;
+		int ef = 180;
 		for (int i = parti.numChunks - 1; i >= 0; --i) {
 			if ((!q->resHeap.empty()) && (-(q->resHeap.top().dist)) >
-				q->norm * sqrt(parti.MaxLen[i])) break;
+				q->norm * sqrt(parti.MaxLen[i]))
+				break;
 
 			if (parti.EachParti[i].size() < 400) {
 				// std::cout<<i<<","<<parti.EachParti[i].size()<<"..."<<std::endl;
 				// exit(-1);
 				auto& top_candidates = q->resHeap;
-				for (auto& x : parti.EachParti[i]) {
+				for (auto& x : parti.EachParti[i])
+				{
 					float dist = calInnerProductReverse(q->queryPoint, data[x], data.dim);
 
 					top_candidates.emplace(x, dist);
-					if (top_candidates.size() > q->k) top_candidates.pop();
+					if (top_candidates.size() > q->k)
+						top_candidates.pop();
 				}
 				q->cost += parti.EachParti[i].size();
-				//break;
+				// break;
 				continue;
 			}
 
-			//continue;
+			// continue;
 			auto& knng = knngs[i];
 
 			searchInKnng(knng, parti.EachParti[i], q, 0, ef);
 
-			break;
-			////apgs[i] = new hnsw(ips, parti.nums[i], M, ef);
-			//auto& appr_alg = apgs[i];
-			//auto id = parti.EachParti[i][0];
-			//auto data = prep->data.val[id];
-			////appr_alg->addPoint((void*)(data), (size_t)id);
-			////std::mutex inlock;
-			//appr_alg->setEf(q->k + 100);
-			//auto res = appr_alg->searchKnn(q->queryPoint, q->k);
-			//while (!res.empty()) {
-			//	auto top = res.top();
-			//	res.pop();
-			//	q->resHeap.emplace(top.second, top.first);
-			//	while (q->resHeap.size() > q->k) q->resHeap.pop();
-			//}
-
+			// break;
 		}
 
 		auto& top_candidates = q->resHeap;
 
 		q->res.resize(q->k);
 		int pos = q->k;
-		while (!top_candidates.empty()) {
+		while (!top_candidates.empty())
+		{
 			q->res[--pos] = top_candidates.top();
 			top_candidates.pop();
 		}
@@ -399,14 +637,13 @@ public:
 		q->time_total = timer.elapsed();
 	}
 
-
-
-	//void GetTables(Preprocess& prep);
-	//bool IsBuilt(const std::string& file);
-	~mariaV7() {
-		//for (int i = 0; i < parti.numChunks; ++i) {
+	// void GetTables(Preprocess& prep);
+	// bool IsBuilt(const std::string& file);
+	~mariaV8()
+	{
+		// for (int i = 0; i < parti.numChunks; ++i) {
 		//	delete apgs[i];
-		//}
-		//delete[] apgs;
+		// }
+		// delete[] apgs;
 	}
 };

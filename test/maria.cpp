@@ -40,14 +40,14 @@ int main(int argc, char* argv[])
 
     float c = 0.9f;
     int L = 5;
-    int K = 12;
+    int K = 18;
     rnndescent::Matrix<float> base_data;
 
     Preprocess prep(data_fold1 + (argvStr[1]), data_fold2 + (argvStr[3]));
     Partition parti(c, prep);
     mariaV6 mariaV6(prep.data, parti, L, K);
     mariaV7 mariaV7(prep.data, parti, L, K);
-
+    mariaV8 mariaV8(prep.data, parti, L, K);
     float c_ = 0.5;
     int k_ = 50;
     int M = 48;
@@ -81,6 +81,7 @@ int main(int argc, char* argv[])
 
     res.push_back(searchFunction(mariaV6, qs, prep));
     res.push_back(searchFunction(mariaV7, qs, prep));
+    res.push_back(searchFunction(mariaV8, qs, prep));
     saveAndShow(c, k_, dataset, res);
 //    timer11.restart();
 //
