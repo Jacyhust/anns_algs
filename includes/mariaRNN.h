@@ -505,7 +505,13 @@ class mariaV8
 		}
 		else {
 			//in.close();
-
+			srp = new lsh::srp(data, parti.EachParti, file + "_srp", data.N, data.dim);
+			data = data_;
+			std::cout << "Loading index from " << file << ":\n";
+			float mem = (float)getCurrentRSS() / (1024 * 1024);
+			loadIndex(file);
+			float memf = (float)getCurrentRSS() / (1024 * 1024);
+			std::cout << "Actual memory usage: " << memf - mem << " Mb \n";
 
 		}
 	}
@@ -839,6 +845,17 @@ class mariaV8
 
 	}
 
+	void loadIndex(const std::string& file) {
+		std::ifstream in(file, std::ios::binary);
+		if (!in.good()) {
+			std::cerr << "Cannot open file:" << file << std::endl;
+		}
+		in.read((char*)(&N), sizeof(int));
+		in.read((char*)(&size_per_point), sizeof(size_t));
+		link_lists = new char[size_per_point * N];
+		in.read((char*)(link_lists), sizeof(int) * size_per_point * N);
+	}
+
 	~mariaV8()
 	{
 		// for (int i = 0; i < parti.numChunks; ++i) {
@@ -860,8 +877,8 @@ class LiteMARIA {
 	int ef = 200;
 	//Only allow to initialize this class by reading the file
 	LiteMARIA(Data& data_, const std::string& file, Partition& parti) {
-		srp = new lsh::srp(data, parti.EachParti, file + "_srp", data.N, data.dim);
 		data = data_;
+		srp = new lsh::srp(data, parti.EachParti, file + "_srp", data.N, data.dim);
 		std::cout << "Loading index from " << file << ":\n";
 		float mem = (float)getCurrentRSS() / (1024 * 1024);
 		loadIndex(file);

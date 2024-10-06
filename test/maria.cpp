@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
     Partition parti(c, prep);
     //mariaV6 mariaV6(prep.data, parti, L, K);
     //mariaV7 mariaV7(prep.data, parti, L, K);
-    mariaV8 mariaV8(prep.data, prep.SquareLen, index_fold + argvStr[2] + "_maria", parti, L, K);
+    //mariaV8 mariaV8(prep.data, prep.SquareLen, index_fold + argvStr[2] + "_maria", parti, L, K);
     LiteMARIA lm(prep.data, index_fold + argvStr[2] + "_maria", parti);
     float c_ = 0.5;
     int k_ = 50;
@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
 
     //res.push_back(searchFunction(mariaV6, qs, prep));
     //res.push_back(searchFunction(mariaV7, qs, prep));
-    res.push_back(searchFunction(mariaV8, qs, prep));
+    //res.push_back(searchFunction(mariaV8, qs, prep));
     res.push_back(searchFunction(lm, qs, prep));
     saveAndShow(c, k_, dataset, res);
     //    timer11.restart();
