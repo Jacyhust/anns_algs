@@ -849,6 +849,8 @@ class mariaV8
 };
 
 class LiteMARIA {
+	public:
+	std::string alg_name = "LiteMaria";
 	char* link_lists = nullptr;
 	size_t size_per_point = 16;
 	lsh::srp* srp = nullptr;
@@ -857,7 +859,7 @@ class LiteMARIA {
 	public:
 	int ef = 200;
 	//Only allow to initialize this class by reading the file
-	LiteMARIA(Data& data_, std::string& file, Partition& parti) {
+	LiteMARIA(Data& data_, const std::string& file, Partition& parti) {
 		srp = new lsh::srp(data, parti.EachParti, file + "_srp", data.N, data.dim);
 		data = data_;
 		std::cout << "Loading index from " << file << ":\n";
