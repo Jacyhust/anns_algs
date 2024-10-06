@@ -490,6 +490,8 @@ class mariaV8
 		knngs.resize(parti.numChunks);
 		lsh::timer timer;
 		float time = 0.0f;
+
+
 #pragma omp parallel for schedule(dynamic)
 		for (int i = parti.numChunks - 1; i >= 0; --i) {
 			if (parti.EachParti[i].size() < 100) {
@@ -507,9 +509,9 @@ class mariaV8
 				auto& id = parti.EachParti[i][j];
 				data_in_block.val[j] = data[id];
 			}
-			timer.restart();
+			//timer.restart();
 			srp->kjoin1(knns, parti.EachParti[i], i, para.S, width);
-			time += timer.elapsed();
+			//time += timer.elapsed();
 			rnnd::RNNDescent index(data_in_block, para);
 			// index.build(data_in_block.N, 0);
 			index.build(data_in_block.N, 0, knns);
@@ -521,6 +523,7 @@ class mariaV8
 		std::cout << "NN Descent    TIME: " << timer.elapsed() << "s." << std::endl
 			<< std::endl;
 		timer.restart();
+
 		//std::vector<block_pairs> bps;
 		auto& bps = conn_blocks;
 		//#pragma omp parallel for schedule(dynamic)
