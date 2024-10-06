@@ -23,7 +23,7 @@
 #include "patch_ubuntu.h"
 #include "StructType.h"
 
-//#define COUNT_CC
+ //#define COUNT_CC
 
 struct Res//the result of knns
 {
@@ -56,7 +56,7 @@ namespace lsh
 {
 	class progress_display
 	{
-	public:
+		public:
 		explicit progress_display(
 			unsigned long expected_count,
 			std::ostream& os = std::cout,
@@ -107,7 +107,7 @@ namespace lsh
 		{
 			return _expected_count;
 		}
-	private:
+		private:
 		std::ostream& m_os;
 		const std::string m_s1;
 		const std::string m_s2;
@@ -136,7 +136,7 @@ namespace lsh
 	 */
 	class timer
 	{
-	public:
+		public:
 		timer() : time_begin(std::chrono::steady_clock::now()) {};
 		~timer() {};
 		/**
@@ -154,9 +154,9 @@ namespace lsh
 		double elapsed()
 		{
 			std::chrono::steady_clock::time_point time_end = std::chrono::steady_clock::now();
-			return (std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_begin).count())*1e-6;// / CLOCKS_PER_SEC;
+			return (std::chrono::duration_cast<std::chrono::microseconds>(time_end - time_begin).count()) * 1e-6;// / CLOCKS_PER_SEC;
 		}
-	private:
+		private:
 		std::chrono::steady_clock::time_point time_begin;
 	};
 }
@@ -188,7 +188,7 @@ inline float cal_inner_product(float* v1, float* v2, int dim)
 
 	return calIp_fast(v1, v2, dim);
 #endif
-	
+
 }
 
 inline float cal_L2sqr(float* v1, float* v2, int dim)
@@ -226,7 +226,7 @@ inline float cal_inner_product(const float* v1, const float* v2, int dim)
 	}
 	return res;
 #endif
-	
+
 }
 
 inline float cal_L2sqr(const float* v1, const float* v2, int dim)
@@ -334,7 +334,7 @@ namespace threadPoollib
 	typedef unsigned short int vl_type;
 
 	class VisitedList {
-	public:
+		public:
 		vl_type curV;
 		//vl_type* mass;
 		std::unordered_set<int> mass;
@@ -354,7 +354,7 @@ namespace threadPoollib
 			}
 		};
 
-		~VisitedList() { 
+		~VisitedList() {
 			//delete[] mass; 
 		}
 	};
@@ -370,7 +370,7 @@ namespace threadPoollib
 		std::mutex poolguard;
 		int numelements;
 
-	public:
+		public:
 		VisitedListPool(int initmaxpools, int numelements1) {
 			numelements = numelements1;
 			for (int i = 0; i < initmaxpools; i++)
@@ -411,9 +411,9 @@ namespace threadPoollib
 #if defined(unix) || defined(__unix__)
 inline void localtime_s(tm* result, time_t* time) {
 	if (localtime_r(time, result) == nullptr) {
-        std::cerr << "Error converting time." << std::endl;
-        std::memset(result, 0, sizeof(struct tm)); 
-    }
+		std::cerr << "Error converting time." << std::endl;
+		std::memset(result, 0, sizeof(struct tm));
+	}
 }
 #endif
 
@@ -428,14 +428,14 @@ inline void saveAndShow(float c, int k, std::string& dataset, std::vector<resOut
 
 	time_t zero_point = 1635153971 - 17 * 3600 - 27 * 60;//Let me set the time at 2021.10.25. 17:27 as the zero point
 	size_t diff = (size_t)(now - zero_point);
-//#if defined(unix) || defined(__unix__)
-//	llt lt(diff);
-//#endif
-//
-//	double date = ((float)(now - zero_point)) / 86400;
-//	float hour = date - floor(date);
-//	hour *= 24;
-//	float minute = hour = date - floor(date);
+	//#if defined(unix) || defined(__unix__)
+	//	llt lt(diff);
+	//#endif
+	//
+	//	double date = ((float)(now - zero_point)) / 86400;
+	//	float hour = date - floor(date);
+	//	hour *= 24;
+	//	float minute = hour = date - floor(date);
 
 
 	std::stringstream ss;
@@ -520,4 +520,79 @@ int isUnique(std::map<U, T>& vec) {
 		++len;
 	}
 	return len == s.size();
+}
+
+
+#if defined(_WIN32)
+#include <windows.h>
+#include <psapi.h>
+#define NOMINMAX
+
+#undef max
+
+#undef min
+#elif defined(__unix__) || defined(__unix) || defined(unix) || (defined(__APPLE__) && defined(__MACH__))
+
+#include <unistd.h>
+#include <sys/resource.h>
+
+
+#if defined(__APPLE__) && defined(__MACH__)
+#include <mach/mach.h>
+
+#elif (defined(_AIX) || defined(__TOS__AIX__)) || (defined(__sun__) || defined(__sun) || defined(sun) && (defined(__SVR4) || defined(__svr4__)))
+#include <fcntl.h>
+#include <procfs.h>
+
+#elif defined(__linux__) || defined(__linux) || defined(linux) || defined(__gnu_linux__)
+
+#endif
+
+#else
+#error "Cannot define getPeakRSS( ) or getCurrentRSS( ) for an unknown OS."
+#endif
+
+/**
+* Returns the current resident set size (physical memory use) measured
+* in bytes, or zero if the value cannot be determined on this OS.
+*/
+inline size_t getCurrentRSS() {
+#if defined(_WIN32)
+	/* Windows -------------------------------------------------- */
+	PROCESS_MEMORY_COUNTERS info;
+	GetProcessMemoryInfo(GetCurrentProcess(), &info, sizeof(info));
+	return (size_t)info.WorkingSetSize;
+
+#elif defined(__APPLE__) && defined(__MACH__)
+	/* OSX ------------------------------------------------------ */
+	struct mach_task_basic_info info;
+	mach_msg_type_number_t infoCount = MACH_TASK_BASIC_INFO_COUNT;
+	if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO,
+		(task_info_t)&info, &infoCount) != KERN_SUCCESS)
+		return (size_t)0L;      /* Can't access? */
+	return (size_t)info.resident_size;
+
+#elif defined(__linux__) || defined(__linux) || defined(linux) || defined(__gnu_linux__)
+	/* Linux ---------------------------------------------------- */
+	long rss = 0L;
+	FILE* fp = NULL;
+	if ((fp = fopen("/proc/self/statm", "r")) == NULL)
+		return (size_t)0L;      /* Can't open? */
+	if (fscanf(fp, "%*s%ld", &rss) != 1) {
+		fclose(fp);
+		return (size_t)0L;      /* Can't read? */
+	}
+	fclose(fp);
+	return (size_t)rss * (size_t)sysconf(_SC_PAGESIZE);
+
+#else
+	/* AIX, BSD, Solaris, and Unknown OS ------------------------ */
+	return (size_t)0L;          /* Unsupported. */
+#endif
+}
+
+inline bool exists_test(const std::string& name) {
+	//return false;
+	std::ifstream f(name.c_str());
+	return f.good();
 }

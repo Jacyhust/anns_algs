@@ -17,9 +17,10 @@
 namespace lsh
 {
 	struct srpPair {
-		uint32_t val;
-		int id;
+		uint32_t val = 0;
+		int id = -1;
 
+		srpPair() = default;
 		srpPair(int id_, uint32_t hashval) : id(id_), val(hashval) {}
 
 		bool operator<(const srpPair& rhs) const { return val < rhs.val; }
@@ -32,9 +33,12 @@ namespace lsh
 	{
 		// int N=0;
 
-		std::vector<std::vector<uint32_t>> hashvals;
+		//N * L;
+
 		std::vector<std::vector<srpPair>> hash_tables;
+		std::vector<std::vector<int>>& part_map;
 		Data data;
+		std::string index_file;
 		std::atomic<size_t> cost{ 0 };
 		float* rndAs = nullptr;
 		int dim = 0;
@@ -44,8 +48,9 @@ namespace lsh
 		int L = 0;
 		// Dimension of the hash table
 		int K = 0;
-
+		float indexing_time = 0.0f;
 		public:
+		std::vector<std::vector<uint16_t>> hashvals;
 		size_t getCost()
 		{
 			return cost;
@@ -53,7 +58,8 @@ namespace lsh
 
 		srp() = default;
 
-		srp(Data& data_, std::vector<std::vector<int>>& part_map, int N_, int dim_, int L_, int K_)
+		srp(Data& data_, std::vector<std::vector<int>>& part_map_, const std::string& index_file_,
+			int N_, int dim_, int L_ = 4, int K_ = 16, bool isbuilt = 1) :part_map(part_map_)
 		{
 			data = data_;
 			// N=N_;
@@ -62,7 +68,37 @@ namespace lsh
 			K = K_;
 			S = L * K;
 			hashvals.resize(N_);
+			index_file = index_file_;
+			if (L > 4 || K > 16) {
+				std::cerr << "The valid ranges of L and K are: 1<=L<=4, 1<=K<=16" << std::endl;
+				exit(-1);
+			}
 
+			//std::ifstream in(index_file, std::ios::binary);
+			lsh::timer timer;
+			if (!(isbuilt && exists_test(index_file))) {
+				float mem = (float)getCurrentRSS() / (1024 * 1024);
+				buildIndex();
+				float memf = (float)getCurrentRSS() / (1024 * 1024);
+				indexing_time = timer.elapsed();
+				std::cout << "Building time:" << indexing_time << "  seconds.\n";
+				FILE* fp = nullptr;
+				fopen_s(&fp, "./indexes/maria_info.txt", "a");
+				if (fp) fprintf(fp, "%s\nmemory=%f MB, IndexingTime=%f s.\n\n", index_file.c_str(), memf - mem, indexing_time);
+				saveIndex();
+			}
+			else {
+				//in.close();
+				std::cout << "Loading index from " << index_file << ":\n";
+				float mem = (float)getCurrentRSS() / (1024 * 1024);
+				loadIndex();
+				float memf = (float)getCurrentRSS() / (1024 * 1024);
+				std::cout << "Actual memory usage: " << memf - mem << " Mb \n";
+
+			}
+		}
+
+		void buildIndex() {
 			std::cout << std::endl
 				<< "START HASHING..." << std::endl
 				<< std::endl;
@@ -200,6 +236,70 @@ namespace lsh
 			for (auto& table : hash_tables)
 			{
 				std::sort(table.begin(), table.end());
+			}
+		}
+
+		void saveIndex() {
+
+			std::string file = index_file;
+			std::ofstream out(file, std::ios::binary);
+
+			out.write((char*)(&L), sizeof(int));
+			out.write((char*)(&K), sizeof(int));
+			out.write((char*)(&dim), sizeof(int));
+			S = L * K;
+			//save hashpar
+			out.write((char*)(rndAs), sizeof(float) * S * dim);
+
+			//save hashvals
+			int N = hashvals.size();
+			out.write((char*)(&N), sizeof(int));
+			for (int i = 0;i < N;++i) {
+				out.write((char*)(hashvals[i].data()), sizeof(uint16_t) * L);
+			}
+
+			//save hash tables
+			int ntb = hash_tables.size();
+			out.write((char*)(&ntb), sizeof(int));
+			for (int j = 0; j < ntb; ++j) {
+				int np = hash_tables[j].size();
+				out.write((char*)(&np), sizeof(int));
+				out.write((char*)(hash_tables[j].data()), sizeof(srpPair) * np);
+			}
+		}
+
+		void loadIndex() {
+
+			std::string file = index_file;
+			std::ifstream in(file, std::ios::binary);
+
+			in.read((char*)(&L), sizeof(int));
+			in.read((char*)(&K), sizeof(int));
+			in.read((char*)(&dim), sizeof(int));
+			S = L * K;
+
+			//load hashpar
+			rndAs = new float[S * dim];
+			in.read((char*)(rndAs), sizeof(float) * S * dim);
+
+			//load hashvals
+			int N = 0;
+			in.read((char*)(&N), sizeof(int));
+			hashvals.resize(N);
+			for (int i = 0;i < N;++i) {
+				hashvals[i].resize(L);
+				in.read((char*)(hashvals[i].data()), sizeof(uint16_t) * L);
+			}
+
+			//load hash tables
+			int ntb = 0;
+			in.read((char*)(&ntb), sizeof(int));
+			hash_tables.resize(ntb);
+			for (int j = 0; j < ntb; ++j) {
+				int np = 0;
+				in.read((char*)(&np), sizeof(int));
+				hash_tables.resize(np);
+				in.read((char*)(hash_tables[j].data()), sizeof(srpPair) * np);
 			}
 		}
 
@@ -400,6 +500,82 @@ namespace lsh
 				if (pool.back().id == -1) pool.pop_back();
 				if (pool.size() > K) pool.resize(K);
 			}
+		}
+
+		void calQHash(queryN* q) {
+			//hashvals[i].resize(L, 0);
+			auto& vals = q->srpval;
+			for (int j = 0; j < L; ++j)
+			{
+				for (int l = 0; l < K; ++l)
+				{
+					float val = cal_inner_product(q->queryPoint, rndAs + (j * K + l) * dim, dim);
+					if (val > 0)
+						vals[j] |= (1 << l);
+				}
+			}
+		}
+
+		void knn(queryN* q) {
+			int np = part_map.size() - 1;
+			int ub = 200;
+			int cnt = 0;
+			std::vector<bool>& visited = q->visited;
+			visited.resize(data.N, false);
+			int size = part_map[np].size();
+			if (part_map[np].size() < ub) {
+				for (auto& u : part_map[np]) {
+					visited[u] = true;
+					q->top_candidates.emplace(u, calInnerProductReverse(q->queryPoint, data[u], data.dim));
+				}
+
+				return;
+			}
+
+			int num_candidates = 0;
+			uint diff = 1;
+			int lpos[4];
+			int rpos[4];
+			uint16_t lval[4], rval[4];
+			for (int i = 0;i < L;++i) {
+				auto& table = hash_tables[i + np * L];
+				rpos[i] = std::upper_bound(table.begin(), table.end(), srpPair(-1, q->srpval[i])) - table.begin();
+				lpos[i] = rpos[i] - 1;
+				while (lpos[i] >= 0 && table[lpos[i]].val >= q->srpval[i]) {
+					lpos[i]--;
+				}
+				num_candidates += rpos[i] - lpos[i] - 1;
+			}
+
+			while (num_candidates < ub) {
+				num_candidates = 0;
+				for (int i = 0;i < L;++i) {
+					auto& table = hash_tables[i + np * L];
+					lval[i] = q->srpval[i] / diff * diff;
+					rval[i] = lval[i] + diff;
+					while (lpos[i] >= 0 && table[lpos[i]].val >= lval[i]) {
+						lpos[i]--;
+					}
+
+					while (rpos[i] < size && table[rpos[i]].val <= rval[i]) {
+						rpos[i]++;
+					}
+					num_candidates += rpos[i] - lpos[i] - 1;
+				}
+			}
+
+			for (int i = 0;i < L;++i) {
+				auto& table = hash_tables[i + np * L];
+				for (int j = lpos[i] + 1;j < rpos[i];++j) {
+					int u = part_map[np][table[j].id];
+					if (visited[u]) continue;
+					visited[u] = true;
+					q->top_candidates.emplace(u, calInnerProductReverse(q->queryPoint, data[u], data.dim));
+					cnt++;
+					if (cnt > ub) break;
+				}
+			}
+
 		}
 	};
 }

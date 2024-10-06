@@ -26,29 +26,29 @@
 //typedef std::unique_lock<std::mutex> read_lock;
 //typedef std::unique_lock<std::mutex> write_lock;
 
- #if (__cplusplus >= 201703L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 201703L) && (_MSC_VER >= 1913))
- #include <shared_mutex>
- typedef std::shared_mutex mp_mutex;
- //In C++17 format, read_lock can be shared
- typedef std::shared_lock<std::shared_mutex> read_lock;
- typedef std::unique_lock<std::shared_mutex> write_lock;
- #else
- typedef std::mutex mp_mutex;
- //Not in C++17 format, read_lock is the same as write_lock and can not be shared
- typedef std::unique_lock<std::mutex> read_lock;
- typedef std::unique_lock<std::mutex> write_lock;
- #endif // _HAS_CXX17
+#if (__cplusplus >= 201703L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 201703L) && (_MSC_VER >= 1913))
+#include <shared_mutex>
+typedef std::shared_mutex mp_mutex;
+//In C++17 format, read_lock can be shared
+typedef std::shared_lock<std::shared_mutex> read_lock;
+typedef std::unique_lock<std::shared_mutex> write_lock;
+#else
+typedef std::mutex mp_mutex;
+//Not in C++17 format, read_lock is the same as write_lock and can not be shared
+typedef std::unique_lock<std::mutex> read_lock;
+typedef std::unique_lock<std::mutex> write_lock;
+#endif // _HAS_CXX17
 
 struct Node2
 {
-private:
-public:
+	private:
+	public:
 	int id = 0;
 	Res* neighbors = nullptr;
 	int in = 0;
 	int out = 0;
 	//int nextFill = -1;
-public:
+	public:
 	bool* idxs = nullptr;
 	std::unordered_set<int> remainings;
 
@@ -137,7 +137,7 @@ typedef std::priority_queue<std::pair<Res, int>, std::vector<std::pair<Res, int>
 
 class divGraph :public zlsh
 {
-private:
+	private:
 
 	std::string file;
 	size_t edgeTotal = 0;
@@ -147,7 +147,7 @@ private:
 	std::vector<int> records;
 	int clusterFlag = 0;
 
-	void oneByOneInsert(){
+	void oneByOneInsert() {
 		linkLists.resize(N, nullptr);
 		int unitL = std::max(efC, maxT);
 
@@ -176,12 +176,12 @@ private:
 		ParallelFor(1, N, 96, [&](size_t i, size_t threadId) {
 			insertLSHRefine(idx[i]);
 			++pd;
-		});
+			});
 
 		delete[] idx;
 	}
 
-	void refine(){
+	void refine() {
 		Res* rnns = new Res[N * maxT + 1];
 		std::vector<int> rnnSize(N, 0);
 		for (int i = 0; i < N; ++i) {
@@ -226,7 +226,7 @@ private:
 	void buildChunks();
 	void insertPart(int pId, int ep, int mT, int mC, std::vector<std::vector<Res>>& partEdges);
 
-public:
+	public:
 	//Only for construction, not saved
 	int maxT = -1;
 	std::atomic<size_t> compCostConstruction{ 0 };
@@ -253,7 +253,7 @@ public:
 	mp_mutex hash_lock;
 	int ef = -1;
 	int first_id = 0;
-	uint64_t getKey(int u, int v){
+	uint64_t getKey(int u, int v) {
 		if (u > v) {
 			return (((uint64_t)u) << 32) | (uint64_t)v;
 		}
@@ -264,10 +264,10 @@ public:
 
 
 	inline constexpr uint64_t getKey(tPoints& tp) const noexcept { return *(uint64_t*)&tp; }
-public:
+	public:
 	std::string getFilename() const { return file; }
 
-	void knn(queryN* q){
+	void knn(queryN* q) {
 		lsh::timer timer;
 		timer.restart();
 		q->hashval = calHash(q->queryPoint);
@@ -293,21 +293,21 @@ public:
 			if (qpos[j] != hashTables[j].begin()) {
 				lpos[j] = qpos[j];
 				--lpos[j];
-	#ifdef USE_LCCP
+#ifdef USE_LCCP
 				lEntries.push(posInfo(j, getLLCP(lpos[j]->first, keys[j])));
-	#else
+#else
 				lEntries.push(posInfo(j, getLevel(lpos[j]->first, qpos[j]->first)));
-	#endif // USE_LCCP
+#endif // USE_LCCP
 
 			}
 			//
 			rpos[j] = qpos[j];
 			if (rpos[j] != hashTables[j].end()) {
-	#ifdef USE_LCCP
+#ifdef USE_LCCP
 				rEntries.push(posInfo(j, getLLCP(rpos[j]->first, keys[j])));
-	#else
+#else
 				rEntries.push(posInfo(j, getLevel(rpos[j]->first, qpos[j]->first)));
-	#endif // USE_LCCP
+#endif // USE_LCCP
 			}
 		}
 
@@ -339,11 +339,11 @@ public:
 				}
 
 				if (lpos[t.id] != hashTables[t.id].begin()) {
-	#ifdef USE_LCCP
+#ifdef USE_LCCP
 					t.dist = getLLCP(lpos[t.id]->first, keys[t.id]);
-	#else
+#else
 					t.dist = getLevel(lpos[t.id]->first, qpos[t.id]->first);
-	#endif // USE_LCCP
+#endif // USE_LCCP
 					lEntries.push(t);
 				}
 			}
@@ -365,11 +365,11 @@ public:
 					}
 				}
 				if (rpos[t.id] != hashTables[t.id].end()) {
-	#ifdef USE_LCCP
+#ifdef USE_LCCP
 					t.dist = getLLCP(rpos[t.id]->first, keys[t.id]);
-	#else
+#else
 					t.dist = getLevel(rpos[t.id]->first, qpos[t.id]->first);
-	#endif // USE_LCCP
+#endif // USE_LCCP
 					rEntries.push(t);
 				}
 			}
@@ -390,10 +390,10 @@ public:
 		while (!candTable.empty()) {
 			auto u = candTable.top();
 			pqEntries.push(std::make_pair(u, 1));
-			q->resHeap.push(u);
+			q->top_candidates.push(u);
 			candTable.pop();
 		}
-		q->minKdist = q->resHeap.top().dist;
+		q->minKdist = q->top_candidates.top().dist;
 		entryHeap tempPQ;
 		tempPQ.emplace(pqEntries.top());
 		pqEntries.swap(tempPQ);
@@ -408,12 +408,12 @@ public:
 
 
 	//void knn(queryN* q);
-	void knnHNSW(queryN* q){
+	void knnHNSW(queryN* q) {
 		lsh::timer timer;
 		q->hashval = calHash(q->queryPoint);
-	#ifdef USE_SSE
+#ifdef USE_SSE
 		_mm_prefetch((char*)(q->queryPoint), _MM_HINT_T0);
-	#endif
+#endif
 		timer.restart();
 		std::string flag_(N, 'U');
 		std::vector<float> visitedDists(N);
@@ -429,7 +429,7 @@ public:
 		float dist = cal_L2sqr(q->queryPoint, myData[ep0], dim);
 		//float lowerBound = dist;
 		eps.emplace(dist, ep0);
-		q->resHeap.emplace(dist, ep0);
+		q->top_candidates.emplace(dist, ep0);
 		pqEntries.push(std::make_pair(Res(dist, ep0), 1));
 
 		//bestFirstSearchInGraph2(q, flag_, visitedDists, pqEntries);
@@ -441,7 +441,7 @@ public:
 
 	void insertHNSW(int pId);
 	//int searchLSH(int pId, std::vector<zint>& keys, std::priority_queue<Res>& candTable, threadPoollib::vl_type* checkedArrs_local, threadPoollib::vl_type tag);
-	int searchLSH(int pId, std::vector<zint>& keys, std::priority_queue<Res>& candTable, std::unordered_set<int>& checkedArrs_local, threadPoollib::vl_type tag){
+	int searchLSH(int pId, std::vector<zint>& keys, std::priority_queue<Res>& candTable, std::unordered_set<int>& checkedArrs_local, threadPoollib::vl_type tag) {
 		read_lock lock_hr(hash_lock);
 		std::vector<read_lock> lock_hs;
 		for (int i = 0; i < L; ++i) {
@@ -465,21 +465,21 @@ public:
 			if (qpos[j] != hashTables[j].begin()) {
 				lpos[j] = qpos[j];
 				--lpos[j];
-	#ifdef USE_LCCP
+#ifdef USE_LCCP
 				lEntries.push(posInfo(j, getLLCP(lpos[j]->first, keys[j])));
-	#else
+#else
 				lEntries.push(posInfo(j, getLevel(lpos[j]->first, qpos[j]->first)));
-	#endif // USE_LCCP
+#endif // USE_LCCP
 
 			}
 			//
 			rpos[j] = qpos[j];
 			if (rpos[j] != hashTables[j].end()) {
-	#ifdef USE_LCCP
+#ifdef USE_LCCP
 				rEntries.push(posInfo(j, getLLCP(rpos[j]->first, keys[j])));
-	#else
+#else
 				rEntries.push(posInfo(j, getLevel(rpos[j]->first, qpos[j]->first)));
-	#endif // USE_LCCP
+#endif // USE_LCCP
 			}
 		}
 
@@ -496,7 +496,7 @@ public:
 				for (int i = 0; i < step; ++i) {
 					++numAccess[t.id];
 					res_pair.id = lpos[t.id]->second;
-					if (checkedArrs_local.find(res_pair.id)==checkedArrs_local.end()) {
+					if (checkedArrs_local.find(res_pair.id) == checkedArrs_local.end()) {
 						res_pair.dist = cal_L2sqr(myData[pId], myData[res_pair.id], dim);
 						candTable.push(res_pair);
 						//checkedArrs_local[res_pair.id] = tag;
@@ -511,11 +511,11 @@ public:
 					}
 				}
 				if (lpos[t.id] != hashTables[t.id].begin()) {
-	#ifdef USE_LCCP
+#ifdef USE_LCCP
 					t.dist = getLLCP(lpos[t.id]->first, keys[t.id]);
-	#else
+#else
 					t.dist = getLevel(lpos[t.id]->first, qpos[t.id]->first);
-	#endif // USE_LCCP
+#endif // USE_LCCP
 					lEntries.push(t);
 				}
 
@@ -527,7 +527,7 @@ public:
 				for (int i = 0; i < step; ++i) {
 					++numAccess[t.id];
 					res_pair.id = rpos[t.id]->second;
-					if (checkedArrs_local.find(res_pair.id)==checkedArrs_local.end()) {
+					if (checkedArrs_local.find(res_pair.id) == checkedArrs_local.end()) {
 						res_pair.dist = cal_L2sqr(myData[pId], myData[res_pair.id], dim);
 						candTable.push(res_pair);
 						//checkedArrs_local[res_pair.id] = tag;
@@ -538,23 +538,23 @@ public:
 					}
 				}
 				if (rpos[t.id] != hashTables[t.id].end()) {
-	#ifdef USE_LCCP
+#ifdef USE_LCCP
 					t.dist = getLLCP(rpos[t.id]->first, keys[t.id]);
-	#else
+#else
 					t.dist = getLevel(rpos[t.id]->first, qpos[t.id]->first);
-	#endif // USE_LCCP
+#endif // USE_LCCP
 					rEntries.push(t);
 				}
 			}
 			if (candTable.size() >= lshUB) break;
 		}
-		
+
 		return 0;
 	}
 	//int searchLSH(std::vector<zint>& keys, std::priority_queue<Res>& candTable, threadPoollib::vl_type* checkedArrs_local, threadPoollib::vl_type tag);
 	//int searchLSH(std::vector<zint>& keys, std::priority_queue<Res>& candTable);
 
-	void insertLSHRefine(int pId){
+	void insertLSHRefine(int pId) {
 		std::priority_queue<Res> candTable;
 		std::vector<zint> keys(L);
 		threadPoollib::VisitedList* vl = visited_list_pool_->getFreeVisitedList();
@@ -564,7 +564,7 @@ public:
 		for (int j = 0; j < L; j++) {
 			keys[j] = getZ(hashval[pId] + j * K);
 		}
-		
+
 		searchLSH(pId, keys, candTable, checkedArrs_local, tag);
 		compCostConstruction += candTable.size();
 
@@ -611,8 +611,8 @@ public:
 	}
 
 	//int searchInBuilding(int pId, int ep, Res* arr, int& size_res);
-	int searchInBuilding(int p, std::priority_queue<Res, std::vector<Res>, std::greater<Res>>& eps, Res* arr, int& size_res, 
-	std::unordered_set<int>& checkedArrs_local, threadPoollib::vl_type tag){
+	int searchInBuilding(int p, std::priority_queue<Res, std::vector<Res>, std::greater<Res>>& eps, Res* arr, int& size_res,
+		std::unordered_set<int>& checkedArrs_local, threadPoollib::vl_type tag) {
 		//size_res = 0;
 		Res res_pair;
 		int cost = 0;
@@ -623,13 +623,13 @@ public:
 			eps.pop();
 			for (int pos = 0; pos < linkLists[u.id]->size(); ++pos) {
 				res_pair.id = (*(linkLists[u.id]))[pos];
-				if (checkedArrs_local.find(res_pair.id)==checkedArrs_local.end()) {
+				if (checkedArrs_local.find(res_pair.id) == checkedArrs_local.end()) {
 					//checkedArrs_local[res_pair.id] = tag;
 					checkedArrs_local.emplace(res_pair.id);
-					if (0 || arr[0].dist> cal_L2sqr(hashval[p], hashval[res_pair.id], lowDim) * coeff) {
+					if (0 || arr[0].dist > cal_L2sqr(hashval[p], hashval[res_pair.id], lowDim) * coeff) {
 						res_pair.dist = cal_L2sqr(myData[p], myData[res_pair.id], dim);
 						++cost;
-						if(arr[0]> res_pair||size_res<efC){
+						if (arr[0] > res_pair || size_res < efC) {
 							arr[size_res++] = res_pair;
 							std::push_heap(arr, arr + size_res);
 							if (size_res >= efC) {
@@ -651,7 +651,7 @@ public:
 	}
 
 
-	void chooseNN_simple(Res* arr, int& size_res){
+	void chooseNN_simple(Res* arr, int& size_res) {
 		while (size_res > T) {
 			std::pop_heap(arr, arr + size_res);
 			size_res--;
@@ -659,7 +659,7 @@ public:
 	}
 
 
-	void chooseNN_div(Res* arr, int& size_res){
+	void chooseNN_div(Res* arr, int& size_res) {
 		if (size_res <= T) return;
 
 		int old_res = size_res;
@@ -675,7 +675,7 @@ public:
 			for (int j = 0; j < choose_num; ++j) {
 				++compCostConstruction;
 				float dist = cal_L2sqr(myData[curRes.id], myData[arr[j].id], dim);
-				if ( dist < curRes.dist) {
+				if (dist < curRes.dist) {
 					flag = false;
 					break;
 				}
@@ -692,7 +692,7 @@ public:
 
 		size_res = choose_num;
 		std::swap(arr[size_res - 1], arr[0]);
-		
+
 		bool f = false;
 		for (int i = 0; i < size_res - 1; ++i) {
 			if (arr[i] == arr[i + 1]) {
@@ -706,24 +706,24 @@ public:
 			for (int j = 0; j < size_res; ++j) {
 				printf("%2d: dist=%f, id=%d\n", j, arr[j].dist, arr[j].id);
 			}
-	#ifdef _MSC_VER
+#ifdef _MSC_VER
 			system("pause");
-	#endif
+#endif
 		}
 	}
 
 
-	void chooseNN(Res* arr, int& size_res){
-	#ifdef DIV
+	void chooseNN(Res* arr, int& size_res) {
+#ifdef DIV
 		chooseNN_div(arr, size_res);
 		//
-	#else
+#else
 		chooseNN_simple(arr, size_res);
-	#endif
+#endif
 	}
 
 
-	void chooseNN_simple(Res* arr, int& size_res, Res new_res){
+	void chooseNN_simple(Res* arr, int& size_res, Res new_res) {
 		if (myFind(arr, arr + size_res, new_res)) return;
 
 		if (size_res < maxT) {
@@ -732,7 +732,7 @@ public:
 			//linkLists[qId]->insert(dist, pId);
 			//linkLists[pId]->increaseIn();
 		}
-		else if (arr[0]>new_res) {
+		else if (arr[0] > new_res) {
 			//linkLists[linkLists[qId]->erase()]->decreaseIn();
 			std::pop_heap(arr, arr + size_res);
 			size_res--;
@@ -747,7 +747,7 @@ public:
 	}
 
 
-	void chooseNN_div(Res* arr, int& size_res, Res new_res){
+	void chooseNN_div(Res* arr, int& size_res, Res new_res) {
 		if (myFind(arr, arr + size_res, new_res)) return;
 
 		if (size_res < maxT) {
@@ -767,9 +767,9 @@ public:
 				for (int j = 0; j < size_res; ++j) {
 					printf("%2d: dist=%f, id=%d\n", j, arr[j].dist, arr[j].id);
 				}
-	#ifdef _MSC_VER
+#ifdef _MSC_VER
 				system("pause");
-	#endif
+#endif
 			}
 			std::swap(arr[size_res - 1], arr[0]);
 			//arr[size_res] = arr[size_res - 1];
@@ -780,21 +780,21 @@ public:
 			arr[size_res++] = new_res;
 			chooseNN_div(arr, size_res);
 		}
-		
+
 	}
 
 
-	void chooseNN(Res* arr, int& size_res, Res new_res){
-	#ifdef DIV
+	void chooseNN(Res* arr, int& size_res, Res new_res) {
+#ifdef DIV
 		chooseNN_div(arr, size_res, new_res);
-	#else
+#else
 		chooseNN_simple(arr, size_res, new_res);
-	#endif
+#endif
 
 	}
 
 
-	void bestFirstSearchInGraph(queryN* q, std::string& stateFlags, entryHeap& pqEntries){
+	void bestFirstSearchInGraph(queryN* q, std::string& stateFlags, entryHeap& pqEntries) {
 		while (!pqEntries.empty()) {
 			auto u = pqEntries.top().first;
 			if (u.dist > q->minKdist) {
@@ -804,48 +804,48 @@ public:
 			pqEntries.pop();
 			q->maxHop = q->maxHop > hop ? q->maxHop : hop;
 			Res* nns = linkLists[u.id]->neighbors;
-	#ifdef USE_SSE
+#ifdef USE_SSE
 			_mm_prefetch((char*)(myData[nns[0].id]), _MM_HINT_T0);
 			_mm_prefetch((char*)(myData[nns[1].id]), _MM_HINT_T0);
-	#endif
+#endif
 
 			for (int pos = 0; pos != maxT; ++pos) {
 				int v = (*(linkLists[u.id]))[pos];
 				if (v < 0) continue;
 				switch (stateFlags[v]) {
-				case 'U':
-					stateFlags[v] = 'G';
-					if (0 || cal_L2sqr(q->hashval, hashval[v], lowDim) * coeffq < q->minKdist) {
-						float dist = cal_L2sqr(q->queryPoint, myData[v], dim);
-						++q->cost;
-						if (false || dist < q->minKdist
-							//|| visitedDists[v] < u.dist
-							) {
-							pqEntries.push(std::make_pair(Res(v, dist), hop + 1));
-							q->resHeap.push(Res(v, dist));
-							if (q->resHeap.size() > ef) {
-								q->resHeap.pop();
-								q->minKdist = q->resHeap.top().dist;
+					case 'U':
+						stateFlags[v] = 'G';
+						if (0 || cal_L2sqr(q->hashval, hashval[v], lowDim) * coeffq < q->minKdist) {
+							float dist = cal_L2sqr(q->queryPoint, myData[v], dim);
+							++q->cost;
+							if (false || dist < q->minKdist
+								//|| visitedDists[v] < u.dist
+								) {
+								pqEntries.push(std::make_pair(Res(v, dist), hop + 1));
+								q->top_candidates.push(Res(v, dist));
+								if (q->top_candidates.size() > ef) {
+									q->top_candidates.pop();
+									q->minKdist = q->top_candidates.top().dist;
+								}
 							}
 						}
-					}
-					else {
-						q->prunings++;
-					}
-					break;
+						else {
+							q->prunings++;
+						}
+						break;
 				}
 			}
 		}
 
-		while (q->resHeap.size() > q->k) q->resHeap.pop();
+		while (q->top_candidates.size() > q->k) q->top_candidates.pop();
 		q->res.resize(q->k);
 		for (int i = q->k - 1; i > -1; --i) {
-			q->res[i] = q->resHeap.top();
-			q->resHeap.pop();
+			q->res[i] = q->top_candidates.top();
+			q->top_candidates.pop();
 		}
 	}
 
-	void showInfo(Preprocess* prep){
+	void showInfo(Preprocess* prep) {
 		float dist_total = 0.0f;
 		size_t sqrMat = 0;
 		size_t cnt = 0, rec = 0, N1 = 0, cnt1 = 0;
@@ -866,18 +866,18 @@ public:
 					if (j == linkLists[u]->size()) printf("size=%d\n", j);
 					printf("%2d: dist=%f, id=%d\n", j, nns[j].dist, nns[j].id);
 				}
-	#ifdef _MSC_VER
+#ifdef _MSC_VER
 				system("pause");
-	#endif
+#endif
 			}
 
 			for (int pos = 0; pos != linkLists[u]->size(); ++pos) {
 				float dist = linkLists[u]->getNeighbor(pos).dist;
-	#ifdef USE_SQRDIST
+#ifdef USE_SQRDIST
 				dist_total += sqrt(dist);
-	#else
+#else
 				res += dist;
-	#endif
+#endif
 			}
 		}
 
@@ -917,7 +917,7 @@ public:
 			(float)compCostConstruction / N, (float)pruningConstruction / compCostConstruction, indexingTime);
 	}
 
-	void save(const std::string& file){
+	void save(const std::string& file) {
 
 		std::ofstream out(file, std::ios::binary);
 		/*****************************LSH************************/
@@ -971,172 +971,172 @@ public:
 		out.close();
 	}
 
-public:
+	public:
 	divGraph(Data& data, Parameter& param_, const std::string& file_, int T_, int efC_,
 		double probC = 0.95, double probQ = 0.99) :zlsh(data, param_, ""), link_list_locks_(data.N) {
-	myData = data.val;
-	T = T_;
-	dim = data.dim;
-	file = file_;
-	lowDim = K;
-	if (L == 0) lowDim = 0;
-	maxT = 2 * T;
-	//maxT = T;
-	efC = 5 * T / 2;
-	efC = efC_;
-	visited_list_pool_ = new threadPoollib::VisitedListPool(1, N);
+		myData = data.val;
+		T = T_;
+		dim = data.dim;
+		file = file_;
+		lowDim = K;
+		if (L == 0) lowDim = 0;
+		maxT = 2 * T;
+		//maxT = T;
+		efC = 5 * T / 2;
+		efC = efC_;
+		visited_list_pool_ = new threadPoollib::VisitedListPool(1, N);
 
-	normalizeHash();
-	double _coeff = 1.0, _coeffq = 1.0;
-	if (lowDim) {
-		// boost::math::chi_squared chi(lowDim);
-		// _coeff = sqrt(boost::math::quantile(chi, probC));
-		// if (probQ == 1.0) _coeffq = DBL_MAX;
-		// else _coeffq = sqrt(boost::math::quantile(chi, probQ));
+		normalizeHash();
+		double _coeff = 1.0, _coeffq = 1.0;
+		if (lowDim) {
+			// boost::math::chi_squared chi(lowDim);
+			// _coeff = sqrt(boost::math::quantile(chi, probC));
+			// if (probQ == 1.0) _coeffq = DBL_MAX;
+			// else _coeffq = sqrt(boost::math::quantile(chi, probQ));
 
-		_coeff=5.09798;
-		_coeffq=5.37302;
-	}
-	
-#ifdef USE_SQRDIST
-	_coeff = _coeff * _coeff;
-	coeff = W * W / _coeff;
-	_coeffq = _coeffq * _coeffq;
-	coeffq = W * W / _coeffq;
-#else
-	coeff = W / _coeff;
-	coeffq = W / _coeffq;
-#endif
-
-	lsh::timer timer;
-	std::cout << "CONSTRUCTING GRAPH..." << std::endl;
-	timer.restart();
-	oneByOneInsert();
-	std::cout << "CONSTRUCTING TIME: " << timer.elapsed() << "s." << std::endl << std::endl;
-	indexingTime = timer.elapsed();
-
-	// std::cout << "SAVING GRAPH..." << std::endl;
-	// timer.restart();
-	// save(file);
-	// std::cout << "SAVING TIME: " << timer.elapsed() << "s." << std::endl << std::endl;
-
-	//showInfo(&prep_);
-}
-
-	divGraph(Data& data, const std::string& path, double probQ = 0.99):link_list_locks_(data.N)
-{
-	myData = data.val;
-	file = path;
-
-	std::ifstream in(file, std::ios::binary);
-	if (!in.good()) {
-		std::cout << BOLDGREEN << "WARNING:\n" << GREEN << "Could not find the divGraph index file. \n"
-			<< "Filename: " << file.c_str() << RESET;
-		exit(-1);
-	}
-
-	lsh::timer timer;
-	std::cout << "LOADING GRAPH..." << std::endl;
-	/***********************************************************************************/
-	in.read((char*)&N, sizeof(int));
-	in.read((char*)&dim, sizeof(int));
-	in.read((char*)&L, sizeof(int));
-	in.read((char*)&K, sizeof(int));
-	in.read((char*)&W, sizeof(float));
-	in.read((char*)&u, sizeof(int));
-
-	S = L * K;
-
-	//hashval
-	hashval = new float* [N];
-	for (int i = 0; i < N; ++i) {
-		hashval[i] = new float[S];
-		in.read((char*)(hashval[i]), sizeof(float) * S);
-	}
-
-	//hashpar,hashmin,hashmax
-	hashPar.rndBs = new float[S];
-	hashMaxs.resize(S);
-	hashMins.resize(S);
-	hashPar.rndAs = new float* [S];
-
-	in.read((char*)hashPar.rndBs, sizeof(float) * S);
-	in.read((char*)&hashMins[0], sizeof(float) * S);
-	in.read((char*)&hashMaxs[0], sizeof(float) * S);
-	for (int i = 0; i != S; ++i) {
-		hashPar.rndAs[i] = new float[dim];
-		in.read((char*)hashPar.rndAs[i], sizeof(float) * dim);
-	}
-
-	//Index
-	hashTables.resize(L);
-	zint key;
-	int pointId;
-	std::cout << "Loading hash..." << std::endl;
-	lsh::progress_display pd((size_t)N * L);
-	for (int i = 0; i != L; ++i) {
-		for (int j = 0; j < N; ++j) {
-			in.read((char*)&(key), sizeof(zint));
-			in.read((char*)&((pointId)), sizeof(int));
-			hashTables[i].insert({ key,pointId });
-			++pd;
+			_coeff = 5.09798;
+			_coeffq = 5.37302;
 		}
-	}
 
-	/**********************************************************************/
-
-	in.read((char*)&T, sizeof(int));
-	in.read((char*)&step, sizeof(int));
-	in.read((char*)&nnD, sizeof(int));
-	in.read((char*)&edgeTotal, sizeof(size_t));
-	in.read((char*)&lowDim, sizeof(int));
-	maxT = 2 * T;
-
-	double _coeffq = 1.0;
-	if (lowDim) {
-		// boost::math::chi_squared chi(lowDim);
-		// if (probQ == 1.0) _coeffq = DBL_MAX;
-		// else _coeffq = sqrt(boost::math::quantile(chi, probQ));
-
-		//_coeff=5.09798;
-		_coeffq=5.37302;
-	}
 #ifdef USE_SQRDIST
-	_coeffq = _coeffq * _coeffq;
-	coeffq = W * W / _coeffq;
+		_coeff = _coeff * _coeff;
+		coeff = W * W / _coeff;
+		_coeffq = _coeffq * _coeffq;
+		coeffq = W * W / _coeffq;
 #else
-	coeffq = W / _coeffq;
+		coeff = W / _coeff;
+		coeffq = W / _coeffq;
 #endif
 
-	int len = -1;
-	in.read((char*)&len, sizeof(int));
-	char* buf = new char[len];
-	in.read((char*)buf, sizeof(char) * len);
-	flagStates.assign(buf);
-	delete[] buf;
+		lsh::timer timer;
+		std::cout << "CONSTRUCTING GRAPH..." << std::endl;
+		timer.restart();
+		oneByOneInsert();
+		std::cout << "CONSTRUCTING TIME: " << timer.elapsed() << "s." << std::endl << std::endl;
+		indexingTime = timer.elapsed();
 
-	in.read((char*)&len, sizeof(int));
-	assert(len == N);
-	//linkLists.resize(N, nullptr);
-	//How to quickly initialize?
-	linkLists.resize(N, nullptr);
-	std::cout << "Loading graph..." << std::endl;
-	linkListBase.resize((size_t)N * (size_t)maxT);
-	//std::swap(pd,lsh::progress_display(N));
-	pd.restart(N);
-	for (size_t i = 0; i < N; ++i) {
-		linkLists[i] = new Node2(i, (Res*)(&(linkListBase[i * (size_t)maxT])));
-		linkLists[i]->readFromFile(in);
+		// std::cout << "SAVING GRAPH..." << std::endl;
+		// timer.restart();
+		// save(file);
+		// std::cout << "SAVING TIME: " << timer.elapsed() << "s." << std::endl << std::endl;
+
+		//showInfo(&prep_);
 	}
 
-	in.close();
+	divGraph(Data& data, const std::string& path, double probQ = 0.99) :link_list_locks_(data.N)
+	{
+		myData = data.val;
+		file = path;
 
-	std::cout << "LOADING TIME: " << timer.elapsed() << "s." << std::endl << std::endl;
+		std::ifstream in(file, std::ios::binary);
+		if (!in.good()) {
+			std::cout << BOLDGREEN << "WARNING:\n" << GREEN << "Could not find the divGraph index file. \n"
+				<< "Filename: " << file.c_str() << RESET;
+			exit(-1);
+		}
 
-	//showInfo(prep);
-}
+		lsh::timer timer;
+		std::cout << "LOADING GRAPH..." << std::endl;
+		/***********************************************************************************/
+		in.read((char*)&N, sizeof(int));
+		in.read((char*)&dim, sizeof(int));
+		in.read((char*)&L, sizeof(int));
+		in.read((char*)&K, sizeof(int));
+		in.read((char*)&W, sizeof(float));
+		in.read((char*)&u, sizeof(int));
 
-	~divGraph(){
+		S = L * K;
+
+		//hashval
+		hashval = new float* [N];
+		for (int i = 0; i < N; ++i) {
+			hashval[i] = new float[S];
+			in.read((char*)(hashval[i]), sizeof(float) * S);
+		}
+
+		//hashpar,hashmin,hashmax
+		hashPar.rndBs = new float[S];
+		hashMaxs.resize(S);
+		hashMins.resize(S);
+		hashPar.rndAs = new float* [S];
+
+		in.read((char*)hashPar.rndBs, sizeof(float) * S);
+		in.read((char*)&hashMins[0], sizeof(float) * S);
+		in.read((char*)&hashMaxs[0], sizeof(float) * S);
+		for (int i = 0; i != S; ++i) {
+			hashPar.rndAs[i] = new float[dim];
+			in.read((char*)hashPar.rndAs[i], sizeof(float) * dim);
+		}
+
+		//Index
+		hashTables.resize(L);
+		zint key;
+		int pointId;
+		std::cout << "Loading hash..." << std::endl;
+		lsh::progress_display pd((size_t)N * L);
+		for (int i = 0; i != L; ++i) {
+			for (int j = 0; j < N; ++j) {
+				in.read((char*)&(key), sizeof(zint));
+				in.read((char*)&((pointId)), sizeof(int));
+				hashTables[i].insert({ key,pointId });
+				++pd;
+			}
+		}
+
+		/**********************************************************************/
+
+		in.read((char*)&T, sizeof(int));
+		in.read((char*)&step, sizeof(int));
+		in.read((char*)&nnD, sizeof(int));
+		in.read((char*)&edgeTotal, sizeof(size_t));
+		in.read((char*)&lowDim, sizeof(int));
+		maxT = 2 * T;
+
+		double _coeffq = 1.0;
+		if (lowDim) {
+			// boost::math::chi_squared chi(lowDim);
+			// if (probQ == 1.0) _coeffq = DBL_MAX;
+			// else _coeffq = sqrt(boost::math::quantile(chi, probQ));
+
+			//_coeff=5.09798;
+			_coeffq = 5.37302;
+		}
+#ifdef USE_SQRDIST
+		_coeffq = _coeffq * _coeffq;
+		coeffq = W * W / _coeffq;
+#else
+		coeffq = W / _coeffq;
+#endif
+
+		int len = -1;
+		in.read((char*)&len, sizeof(int));
+		char* buf = new char[len];
+		in.read((char*)buf, sizeof(char) * len);
+		flagStates.assign(buf);
+		delete[] buf;
+
+		in.read((char*)&len, sizeof(int));
+		assert(len == N);
+		//linkLists.resize(N, nullptr);
+		//How to quickly initialize?
+		linkLists.resize(N, nullptr);
+		std::cout << "Loading graph..." << std::endl;
+		linkListBase.resize((size_t)N * (size_t)maxT);
+		//std::swap(pd,lsh::progress_display(N));
+		pd.restart(N);
+		for (size_t i = 0; i < N; ++i) {
+			linkLists[i] = new Node2(i, (Res*)(&(linkListBase[i * (size_t)maxT])));
+			linkLists[i]->readFromFile(in);
+		}
+
+		in.close();
+
+		std::cout << "LOADING TIME: " << timer.elapsed() << "s." << std::endl << std::endl;
+
+		//showInfo(prep);
+	}
+
+	~divGraph() {
 		for (int i = 0; i < N; ++i) {
 			delete linkLists[i];
 		}

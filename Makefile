@@ -25,7 +25,7 @@ $(OBJDIR)/%.o:./test/test.cpp
 
 $(TARGET):$(OBJS)
 	@test -d $(RESDIR) | mkdir -p $(RESDIR)
-	@test -d indexes | mkdir -p indexes
+	@test -d ./indexes | mkdir -p ./indexes
 	$(CXX) $(CXXFLAGS)  -o $@ $^
 
 nndescent:./test/test_nndescent.cpp ./includes/kgraph.cpp
@@ -45,7 +45,8 @@ srp:./test/test_srp.cpp ./includes/RNNDescent.cpp
 	$(CXX) $(CXXFLAGS) -o srp ./test/test_srp.cpp ./includes/RNNDescent.cpp -lopenblas
 
 maria:./test/maria.cpp ./includes/RNNDescent.cpp
-	$(CXX) $(CXXFLAGS) -o maria ./test/maria.cpp ./includes/RNNDescent.cpp -lopenblas
+	@test -d ./indexes | mkdir -p ./indexes
+	$(CXX) $(CXXFLAGS) -o maria ./test/maria.cpp ./includes/RNNDescent.cpp
 
 
 clean:

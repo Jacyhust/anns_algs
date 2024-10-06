@@ -55,7 +55,7 @@ struct Dist_id
 
 class Preprocess
 {
-public:
+	public:
 	Data data;
 	Data queries;
 	float* SquareLen;
@@ -63,8 +63,8 @@ public:
 	float MaxLen;
 	std::string data_file;
 	std::string ben_file;
-public:
-	Preprocess(const std::string& path, const std::string& ben_file_){
+	public:
+	Preprocess(const std::string& path, const std::string& ben_file_) {
 		lsh::timer timer;
 		std::cout << "LOADING DATA..." << std::endl;
 		timer.restart();
@@ -77,7 +77,7 @@ public:
 		ben_create();
 	}
 
-	void load_data(const std::string& path){
+	void load_data(const std::string& path) {
 		std::string file = path + "_new";
 		std::ifstream in(file.c_str(), std::ios::binary);
 		if (!in) {
@@ -118,7 +118,7 @@ public:
 			data.val[i] = data.base + i * data.dim;
 			in.read((char*)data.val[i], sizeof(float) * header[2]);
 		}
-		
+
 		std::cout << "Load from new file: " << file << "\n";
 		std::cout << "Nq =  " << queries.N << "\n";
 		std::cout << "N  =  " << data.N << "\n";
@@ -127,18 +127,18 @@ public:
 		in.close();
 	}
 
-	void cal_SquareLen(){
+	void cal_SquareLen() {
 		SquareLen = new float[data.N];
 		for (int i = 0; i < data.N; ++i) SquareLen[i] = cal_inner_product(data.val[i], data.val[i], data.dim);
 
 		MaxLen = *std::max_element(SquareLen, SquareLen + data.N);
 	}
 
-	void ben_make(){
+	void ben_make() {
 		benchmark.N = 100, benchmark.num = 100;
 		benchmark.indice = new int* [benchmark.N];
 		benchmark.innerproduct = new float* [benchmark.N];
-		for (int j = 0; j < benchmark.N; j++){
+		for (int j = 0; j < benchmark.N; j++) {
 			benchmark.indice[j] = new int[benchmark.num];
 			benchmark.innerproduct[j] = new float[benchmark.num];
 		}
@@ -168,7 +168,7 @@ public:
 
 	}
 
-	void ben_save(){
+	void ben_save() {
 		std::ofstream out(ben_file.c_str(), std::ios::binary);
 		out.write((char*)&benchmark.N, sizeof(int));
 		out.write((char*)&benchmark.num, sizeof(int));
@@ -184,7 +184,7 @@ public:
 		out.close();
 	}
 
-	void ben_load(){
+	void ben_load() {
 		std::ifstream in(ben_file.c_str(), std::ios::binary);
 		in.read((char*)&benchmark.N, sizeof(int));
 		in.read((char*)&benchmark.num, sizeof(int));
@@ -203,7 +203,7 @@ public:
 		in.close();
 	}
 
-	void ben_create(){
+	void ben_create() {
 		int a_test = data.N + 1;
 		lsh::timer timer;
 		std::ifstream in(ben_file.c_str(), std::ios::binary);
@@ -230,7 +230,7 @@ public:
 		}
 	}
 
-	~Preprocess(){
+	~Preprocess() {
 		//clear_2d_array(data.val, data.N);
 		delete[] data.base;
 		delete[] data.val;
@@ -246,10 +246,10 @@ public:
 
 class Partition
 {
-private:
+	private:
 	float ratio;
 
-	void make_chunks_fargo(Preprocess& prep){
+	void make_chunks_fargo(Preprocess& prep) {
 		std::vector<Dist_id> distpairs;
 		std::vector<int> bucket;
 		//Dist_id pair;
@@ -263,11 +263,11 @@ private:
 		numChunks = 0;
 		chunks.resize(N_);
 		int j = 0;
-		while (j < N_){
+		while (j < N_) {
 			float M = distpairs[j].dist / ratio;
 			cnt = 0;
 			bucket.clear();
-			while (j < N_){
+			while (j < N_) {
 				if ((distpairs[j].dist > M || cnt >= MAXSIZE)) {
 					break;
 				}
@@ -287,13 +287,13 @@ private:
 		display();
 	}
 
-	void make_chunks_maria(Preprocess& prep){
+	void make_chunks_maria(Preprocess& prep) {
 		std::vector<Dist_id> distpairs;
 		std::vector<int> bucket;
 		//Dist_id pair;
 		int N_ = prep.data.N;
 		int n;
-		for (int j = 0; j < N_; j++){
+		for (int j = 0; j < N_; j++) {
 			distpairs.emplace_back(j, prep.SquareLen[j]);
 		}
 		std::sort(distpairs.begin(), distpairs.end());
@@ -301,11 +301,11 @@ private:
 		numChunks = 0;
 		chunks.resize(N_);
 		int j = 0;
-		while (j < N_){
+		while (j < N_) {
 			float M = distpairs[j].dist / ratio;
 			n = 0;
 			bucket.clear();
-			while (j < N_){
+			while (j < N_) {
 				if ((distpairs[j].dist > M || n >= MAXSIZE)) break;
 
 				chunks[distpairs[j].id] = numChunks;
@@ -323,7 +323,7 @@ private:
 		display();
 	}
 
-public:
+	public:
 	int numChunks;
 	std::vector<float> MaxLen;
 
@@ -334,13 +334,13 @@ public:
 	//The data size of each chunks
 	//nums[i]=j: i-th parti has j points
 	std::vector<int> nums;
-	
+
 	//The buckets by parti;
 	//EachParti[i][j]=k: k-th point is the j-th point in i-th parti
 	std::vector<std::vector<int>> EachParti;
 
 	//std::vector<Dist_id> distpairs;
-	void display(){
+	void display() {
 		std::vector<int> n_(numChunks, 0);
 		int N_ = std::accumulate(nums.begin(), nums.end(), 0);
 		for (int j = 0; j < N_; j++)
@@ -362,19 +362,19 @@ public:
 			<< "\n n_pts_       =" << N_ << std::endl;
 	}
 
-	Partition(float c_, Preprocess& prep){
+	Partition(float c_, Preprocess& prep) {
 		ratio = 0.95;
 		float c0_ = 1.5f;
-		
+
 		make_chunks_fargo(prep);
 	}
 
-	Partition(float c_, float c0_, Preprocess& prep){
+	Partition(float c_, float c0_, Preprocess& prep) {
 		ratio = (pow(c0_, 4.0f) - 1) / (pow(c0_, 4.0f) - c_);
 		make_chunks_fargo(prep);
 	}
 	//Partition() {}
-	~Partition(){}
+	~Partition() {}
 };
 
 // class Parameter //N,dim,S, L, K, M, W;
@@ -410,7 +410,7 @@ public:
 
 class queryN
 {
-public:
+	public:
 	// the parameter "c" in "c-ANN"
 	float c;
 	//which chunk is accessed
@@ -422,17 +422,18 @@ public:
 
 	float* queryPoint = NULL;
 	float* hashval = NULL;
+	uint16_t srpval[4];
 	//float** myData = NULL;
-	int dim = 1;
+	//int dim = 1;
 
-	int UB = 0;
-	float minKdist = FLT_MAX;
+	//int UB = 0;
+	//float minKdist = FLT_MAX;
 	// Set of points sifted
-	std::priority_queue<Res> resHeap;
-
+	std::priority_queue<Res> top_candidates;
+	std::vector<bool> visited;
 	//std::vector<int> keys;
 
-public:
+	public:
 	// k-NN
 	unsigned k = 1;
 	// Indice of query point in dataset. Be equal to -1 if the query point isn't in the dataset.
@@ -459,17 +460,20 @@ public:
 	// query result:<indice of ANN,distance of ANN>
 	std::vector<Res> res;
 
-public:
+	public:
 	queryN(unsigned id, float c_, unsigned k_, Preprocess& prep, float beta_) {
 		qid = id;
 		c = c_;
 		k = k_;
 		beta = beta_;
 		//myData = prep.data.val;
-		dim = prep.data.dim+1;
+		//dim = prep.data.dim + 1;
 		queryPoint = prep.queries[id];
+		float dim = prep.data.dim;
+		norm = sqrt(cal_inner_product(queryPoint, queryPoint, prep.data.dim));
+		for (int i = 0;i < dim;++i) {
 
-		norm = sqrt(cal_inner_product(queryPoint, queryPoint, dim));
+		}
 		//search();
 	}
 
@@ -479,7 +483,7 @@ public:
 		k = k_;
 		beta = beta_;
 		//myData = prep.data.val;
-		dim = dim;
+		//dim = dim;
 		queryPoint = query;
 
 		norm = sqrt(cal_inner_product(queryPoint, queryPoint, dim));
@@ -487,15 +491,15 @@ public:
 	}
 	//void search();
 
-	~queryN() { 
-		delete [] hashval; 
+	~queryN() {
+		delete[] hashval;
 		//delete queryPoint;
 	}
 };
 
 class Parameter //N,dim,S, L, K, M, W;
 {
-public:
+	public:
 	unsigned N = 0;
 	unsigned dim = 0;
 	// Number of hash functions
@@ -510,7 +514,7 @@ public:
 
 	float R_min = 0.3f;
 
-	Parameter(Data& data, unsigned L_, unsigned K_, float rmin_){
+	Parameter(Data& data, unsigned L_, unsigned K_, float rmin_) {
 		N = data.N;
 		dim = data.dim;
 		L = L_;
@@ -518,6 +522,6 @@ public:
 		MaxSize = 5;
 		R_min = rmin_;
 	}
-	~Parameter(){}
+	~Parameter() {}
 };
 
