@@ -443,7 +443,7 @@ class mariaV8
 	std::vector<std::vector<std::vector<uint32_t>>> knngs;//edges in each block
 	lsh::srp* srp = nullptr;
 	rnnd::rnn_para para;
-	char* link_lists = nullptr;
+	int* link_lists = nullptr;
 	Data data;
 	std::atomic<size_t> cost{ 0 };
 	int width = 20;
@@ -492,7 +492,7 @@ class mariaV8
 		//para.T2 = 1;
 
 		lsh::timer timer;
-		if (1||!exists_test(index_file)) {
+		if (1 || !exists_test(index_file)) {
 			float mem = (float)getCurrentRSS() / (1024 * 1024);
 			buildIndex();
 			float memf = (float)getCurrentRSS() / (1024 * 1024);
@@ -767,7 +767,7 @@ class mariaV8
 		}
 
 		//To align with 64B
-		size_per_point = ((size_per_point - 1) / 16 + 1) * 64;
+		size_per_point = ((size_per_point - 1) / 16 + 1) * 16;
 	}
 
 	void saveIndex() {
@@ -776,14 +776,14 @@ class mariaV8
 		//delete the original vectors for saving memory
 		if (N > 1e8) delete[] data.base;
 		lsh::timer timer;
-		link_lists = new char[size_per_point * N];
+		link_lists = new int[size_per_point * N];
 		for (int i = 0;i < N;++i) {
-			char* v = link_lists + size_per_point * i;
+			int* v = link_lists + size_per_point * i;
 			//memcpy((void*)(v), (void*)(srp->hashvals[i].data()), sizeof(uint64_t));//v->hashval has the same address with v
 			memcpy(reinterpret_cast<void*>(v), reinterpret_cast<void*>(srp->hashvals[i].data()), sizeof(uint64_t));
-			float* pvnorm = (float*)(v + 8);
+			float* pvnorm = (float*)(v + 2);
 			*pvnorm = sqrt(square_norms[i]);
-			int* pvsize = (int*)(v + 12);
+			int* pvsize = (int*)(v + 3);
 			*pvsize = 0;
 		}
 
@@ -796,10 +796,10 @@ class mariaV8
 #pragma omp parallel for schedule(dynamic,256)
 			for (int j = 0;j < knng.size();++j) {
 				int id1 = ids[j];
-				char* v = (link_lists + size_per_point * id1);
+				int* v = (link_lists + size_per_point * id1);
 				for (auto& u : knng[j]) {
-					uint32_t* links = (uint32_t*)(v + 16);
-					int* size = ((int*)(v + 12));
+					int* links = (v + 4);
+					int* size = ((int*)(v + 3));
 					links[(*size)++] = ids[u];
 				}
 			}
@@ -816,11 +816,12 @@ class mariaV8
 			for (int j = 0;j < knng.size();++j) {
 				int id1 = ids2[j];
 				//vertex* v = (vertex*)(link_lists + size_per_point * id1);
-				char* v = (link_lists + size_per_point * id1);
+				int* v = (link_lists + size_per_point * id1);
+				int* links = (v + 4);
+				int* size = ((int*)(v + 3));
 				for (auto& u : knng[j]) {
 					//v->links[v->size++] = ids2[u];
-					uint32_t* links = (uint32_t*)(v + 16);
-					int* size = ((int*)(v + 12));
+
 					links[(*size)++] = ids1[u];
 					//auto& size = *((int*)(v + 12));
 					//links[size++] = ids2[u];
@@ -835,7 +836,7 @@ class mariaV8
 		std::ofstream out(file, std::ios::binary);
 		out.write((char*)(&N), sizeof(int));
 		out.write((char*)(&size_per_point), sizeof(size_t));
-		out.write((char*)(link_lists), sizeof(char) * size_per_point * N);
+		out.write((char*)(link_lists), sizeof(int) * size_per_point * N);
 
 		float mem = size_per_point * N;
 		mem /= (1 << 30);
@@ -852,8 +853,8 @@ class mariaV8
 		}
 		in.read((char*)(&N), sizeof(int));
 		in.read((char*)(&size_per_point), sizeof(size_t));
-		link_lists = new char[size_per_point * N];
-		in.read((char*)(link_lists), sizeof(char) * size_per_point * N);
+		link_lists = new int[size_per_point * N];
+		in.read((char*)(link_lists), sizeof(int) * size_per_point * N);
 	}
 
 	~mariaV8()
@@ -868,7 +869,7 @@ class mariaV8
 class LiteMARIA {
 	public:
 	std::string alg_name = "LiteMaria";
-	char* link_lists = nullptr;
+	int* link_lists = nullptr;
 	size_t size_per_point = 16;
 	lsh::srp* srp = nullptr;
 	Data data;
@@ -894,7 +895,7 @@ class LiteMARIA {
 		}
 		in.read((char*)(&N), sizeof(int));
 		in.read((char*)(&size_per_point), sizeof(size_t));
-		link_lists = new char[size_per_point * N];
+		link_lists = new int[size_per_point * N];
 		in.read((char*)(link_lists), sizeof(char) * size_per_point * N);
 	}
 
@@ -917,9 +918,9 @@ class LiteMARIA {
 			auto top = candidate_set.top();
 			candidate_set.pop();
 			if (-top.dist > top_candidates.top().dist) break;
-			char* v = (link_lists + size_per_point * top.id);
-			int size = *((int*)(v + 12));
-			uint32_t* links = (uint32_t*)(v + 16);
+			int* v = (link_lists + size_per_point * top.id);
+			int size = *((int*)(v + 3));
+			int* links = (v + 4);
 			for (int i = 0;i < size;++i) {
 				auto& u = links[i];
 				if (visited[u]) continue;

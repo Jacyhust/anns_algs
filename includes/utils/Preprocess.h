@@ -293,7 +293,7 @@ class Partition
 		//Dist_id pair;
 		int N_ = prep.data.N;
 		int n;
-		int minsize = 256;
+		int minsize = 2560000;
 		for (int j = 0; j < N_; j++) {
 			distpairs.emplace_back(j, prep.SquareLen[j]);
 		}
