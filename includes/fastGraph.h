@@ -274,7 +274,7 @@ struct fastGraph
     {
         q->hashval = calHash(q->queryPoint);
 
-        q->UB = (int)N / 10;
+        //q->UB = (int)N / 10;
         int lshUB = N / 200;
         lshUB = 4 * L * log(N) + ef;
         int step = 1;

@@ -36,7 +36,9 @@ struct Res//the result of knns
 	Res(int id_, float inp_) :id(id_), dist(inp_) {}
 	Res(float inp_, int id_) :id(id_), dist(inp_) {}
 	bool operator < (const Res& rhs) const {
-		return dist < rhs.dist;
+		return dist < rhs.dist
+			|| (dist == rhs.dist && id < rhs.id)
+			;
 	}
 
 	constexpr bool operator > (const Res& rhs) const noexcept {

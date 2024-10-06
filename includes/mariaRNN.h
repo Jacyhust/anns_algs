@@ -6,15 +6,23 @@
 #include "RNNDescent.h"
 #include "rnnd.h"
 
-// My class for store the information of a vertex
-// Do not directly define a vectex object
-// It is only for quickly computing the address shifting and increasing the readability
-struct vertex {
-	uint64_t hashval;
-	float norm;
-	int size;
-	uint32_t* links;
-};
+//// My class for store the information of a vertex
+//// Do not directly define a vectex object
+//// It is only for quickly computing the address shifting and increasing the readability
+//struct vertex {
+//	uint64_t hashval;
+//	float norm;
+//	int size;
+//	uint32_t* links;
+//};
+
+//struct vertex {
+//	char* pt;
+//	//uint64_t hashval;
+//	//float norm;
+//	//int size;
+//	//uint32_t* links;
+//};
 
 class mariaV6
 {
@@ -24,7 +32,7 @@ class mariaV6
 	std::vector<std::vector<std::vector<uint32_t>>> knngs;
 	rnndescent::rnn_para para;
 	std::atomic<size_t> cost{ 0 };
-	int* link_lists = nullptr;
+	char* link_lists = nullptr;
 	Data data;
 
 	public:
@@ -435,7 +443,7 @@ class mariaV8
 	std::vector<std::vector<std::vector<uint32_t>>> knngs;//edges in each block
 	lsh::srp* srp = nullptr;
 	rnnd::rnn_para para;
-	int* link_lists = nullptr;
+	char* link_lists = nullptr;
 	Data data;
 	std::atomic<size_t> cost{ 0 };
 	int width = 20;
@@ -458,7 +466,7 @@ class mariaV8
 	int L;
 	int K;
 	//int max_degree = -1;
-	size_t size_per_point = 4;
+	size_t size_per_point = 16;
 	float indexing_time = 0.0f;
 	float* square_norms = nullptr;
 	std::string alg_name = "mariaV8";
@@ -478,6 +486,10 @@ class mariaV8
 		para.S = 36;
 		para.T1 = 2;
 		para.T2 = 4;
+
+		para.S = 2;
+		para.T1 = 1;
+		para.T2 = 1;
 
 		lsh::timer timer;
 		if (!exists_test(index_file)) {
@@ -501,6 +513,7 @@ class mariaV8
 	void buildIndex() {
 		//lsh::srp srp(data, parti.EachParti, data.N, data.dim, L, K);
 		srp = new lsh::srp(data, parti.EachParti, index_file + "_srp", data.N, data.dim, L, K);
+		//return;
 		knngs.resize(parti.numChunks);
 		lsh::timer timer;
 		float time = 0.0f;
@@ -540,14 +553,16 @@ class mariaV8
 
 		//std::vector<block_pairs> bps;
 		auto& bps = conn_blocks;
+		int SS = 1, KK = 1;
 		//#pragma omp parallel for schedule(dynamic)
 		for (int i = parti.numChunks - 1; i >= 0; --i) {
-			int init_S = 32;
+			int init_S = SS;
 			int j = 1;
 			while (i - j >= 0) {
 				//int init_K = (2 * init_S + 32) / L;
-				int init_K = (2 * init_S + 32);
-				bps.emplace_back(i, i - j, init_S, init_K);
+				int init_K = (2 * init_S + SS);
+				bps.emplace_back(i - j, i, init_S, init_K);
+				j *= 2;
 				if (init_S > 1) init_S /= 2;
 			}
 		}
@@ -567,6 +582,7 @@ class mariaV8
 
 	void bfConstruction(int i) {
 		int n = parti.EachParti[i].size();
+		if (n <= 1) return;
 		std::vector<std::vector<Res>> nnset(n, std::vector<Res>(n, Res(-1, FLT_MAX)));
 #pragma omp parallel for schedule(dynamic)
 		for (int j = 0;j < n;++j) {
@@ -582,9 +598,11 @@ class mariaV8
 			std::sort(nnset[j].begin(), nnset[j].end());
 		}
 		auto& apg = knngs[i];
-		apg.resize(n, std::vector<uint32_t>(para.S));
+		int size = para.S;
+		if (size > n) size = n - 1;
+		apg.resize(n, std::vector<uint32_t>(size));
 		for (int j = 0;j < n;++j) {
-			for (int l = 0;l < para.S;++l) {
+			for (int l = 0;l < size;++l) {
 				apg[j][l] = nnset[j][l].id;
 			}
 		}
@@ -598,14 +616,14 @@ class mariaV8
 		srp->kjoin(knns, parti.EachParti[bp.block1_id], bp.block1_id,
 			parti.EachParti[bp.block2_id], bp.block2_id, para.S, width);
 
-		auto& knng2 = knngs[bp.block2_id];
-		bp.normal_edges.resize(parti.EachParti[bp.block1_id].size());
+		auto& knng1 = knngs[bp.block1_id];
+		bp.normal_edges.resize(parti.EachParti[bp.block2_id].size());
 		//std::vector<int> visited(knng2.size(), -1);
 #pragma omp parallel for schedule(dynamic,256)
 		for (int i = 0;i < knns.size();++i) {
-			float* q = data[parti.EachParti[bp.block1_id][i]];
+			float* q = data[parti.EachParti[bp.block2_id][i]];
 			std::priority_queue<Res> top_candidates, candidate_set;
-			std::vector<bool> visited(knng2.size(), false);
+			std::vector<bool> visited(knng1.size(), false);
 			for (auto& res : knns[i]) {
 				top_candidates.push(res);
 				res.dist *= -1.0f;
@@ -619,10 +637,10 @@ class mariaV8
 				auto top = candidate_set.top();
 				candidate_set.pop();
 				if (-top.dist > top_candidates.top().dist) break;
-				for (auto& u : knng2[top.id]) {
+				for (auto& u : knng1[top.id]) {
 					if (visited[u]) continue;
 					visited[u] = true;
-					float dist = cal_inner_product(q, data[parti.EachParti[bp.block2_id][u]], dim);
+					float dist = cal_inner_product(q, data[parti.EachParti[bp.block1_id][u]], dim);
 					candidate_set.emplace(u, dist);
 					top_candidates.emplace(u, -dist);
 					if (top_candidates.size() > bp.efC) top_candidates.pop();
@@ -738,25 +756,29 @@ class mariaV8
 		int j = 1;
 		while (i - j >= 0) {
 			size_per_point += init_S;
+			j *= 2;
 			if (init_S > 1) init_S /= 2;
 		}
 
 		//To align with 64B
-		size_per_point = ((size_per_point - 1) / 16 + 1) * 16;
+		size_per_point = ((size_per_point - 1) / 16 + 1) * 64;
 	}
 
 	void saveIndex() {
-
+		compute_maxsize();
 		std::cout << "Saving edges: " << std::endl;
 		//delete the original vectors for saving memory
 		if (N > 1e8) delete[] data.base;
 		lsh::timer timer;
-		link_lists = new int[size_per_point * N];
+		link_lists = new char[size_per_point * N];
 		for (int i = 0;i < N;++i) {
-			vertex* v = (vertex*)(link_lists + size_per_point * i);
-			memcpy((void*)(v->hashval), (void*)(srp->hashvals[i].data()), sizeof(uint64_t));
-			v->norm = sqrt(square_norms[i]);
-			v->size = 0;
+			char* v = link_lists + size_per_point * i;
+			//memcpy((void*)(v), (void*)(srp->hashvals[i].data()), sizeof(uint64_t));//v->hashval has the same address with v
+			memcpy(reinterpret_cast<void*>(v), reinterpret_cast<void*>(srp->hashvals[i].data()), sizeof(uint64_t));
+			float* pvnorm = (float*)(v + 8);
+			*pvnorm = sqrt(square_norms[i]);
+			int* pvsize = (int*)(v + 12);
+			*pvsize = 0;
 		}
 
 		std::cout << "INITIALIZING  TIME: " << timer.elapsed() << "s." << std::endl;
@@ -768,9 +790,11 @@ class mariaV8
 #pragma omp parallel for schedule(dynamic,256)
 			for (int j = 0;j < knng.size();++j) {
 				int id1 = ids[j];
-				vertex* v = (vertex*)(link_lists + size_per_point * id1);
+				char* v = (link_lists + size_per_point * id1);
 				for (auto& u : knng[j]) {
-					v->links[v->size++] = ids[u];
+					uint32_t* links = (uint32_t*)(v + 16);
+					int* size = ((int*)(v + 12));
+					links[(*size)++] = ids[u];
 				}
 			}
 		}
@@ -784,10 +808,16 @@ class mariaV8
 			auto& knng = bps.normal_edges;
 #pragma omp parallel for schedule(dynamic,256)
 			for (int j = 0;j < knng.size();++j) {
-				int id1 = ids1[j];
-				vertex* v = (vertex*)(link_lists + size_per_point * id1);
+				int id1 = ids2[j];
+				//vertex* v = (vertex*)(link_lists + size_per_point * id1);
+				char* v = (link_lists + size_per_point * id1);
 				for (auto& u : knng[j]) {
-					v->links[v->size++] = ids2[u];
+					//v->links[v->size++] = ids2[u];
+					uint32_t* links = (uint32_t*)(v + 16);
+					int* size = ((int*)(v + 12));
+					links[(*size)++] = ids1[u];
+					//auto& size = *((int*)(v + 12));
+					//links[size++] = ids2[u];
 				}
 			}
 		}
@@ -819,8 +849,8 @@ class mariaV8
 };
 
 class LiteMARIA {
-	int* link_lists = nullptr;
-	size_t size_per_point = 4;
+	char* link_lists = nullptr;
+	size_t size_per_point = 16;
 	lsh::srp* srp = nullptr;
 	Data data;
 	int N = 0;
@@ -845,7 +875,7 @@ class LiteMARIA {
 		}
 		in.read((char*)(&N), sizeof(int));
 		in.read((char*)(&size_per_point), sizeof(size_t));
-		link_lists = new int[size_per_point * N];
+		link_lists = new char[size_per_point * N];
 		in.read((char*)(link_lists), sizeof(int) * size_per_point * N);
 	}
 
@@ -868,9 +898,11 @@ class LiteMARIA {
 			auto top = candidate_set.top();
 			candidate_set.pop();
 			if (-top.dist > top_candidates.top().dist) break;
-			vertex* v = (vertex*)(link_lists + size_per_point * top.id);
-			for (int i = 0;i < v->size;++i) {
-				auto& u = v->links[i];
+			char* v = (link_lists + size_per_point * top.id);
+			int size = *((int*)(v + 12));
+			uint32_t* links = (uint32_t*)(v + 16);
+			for (int i = 0;i < size;++i) {
+				auto& u = links[i];
 				if (visited[u]) continue;
 				visited[u] = true;
 				float dist = cal_inner_product(q->queryPoint, data[u], data.dim);

@@ -293,6 +293,7 @@ class Partition
 		//Dist_id pair;
 		int N_ = prep.data.N;
 		int n;
+		int minsize = 256;
 		for (int j = 0; j < N_; j++) {
 			distpairs.emplace_back(j, prep.SquareLen[j]);
 		}
@@ -306,7 +307,7 @@ class Partition
 			n = 0;
 			bucket.clear();
 			while (j < N_) {
-				if ((distpairs[j].dist > M || n >= MAXSIZE)) break;
+				if ((n >= minsize) && (distpairs[j].dist > M || n >= MAXSIZE)) break;
 
 				chunks[distpairs[j].id] = numChunks;
 				bucket.push_back(distpairs[j].id);
@@ -366,7 +367,7 @@ class Partition
 		ratio = 0.95;
 		float c0_ = 1.5f;
 
-		make_chunks_fargo(prep);
+		make_chunks_maria(prep);
 	}
 
 	Partition(float c_, float c0_, Preprocess& prep) {
