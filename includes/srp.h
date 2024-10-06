@@ -16,8 +16,7 @@
 
 namespace lsh
 {
-	struct srpPair
-	{
+	struct srpPair {
 		uint32_t val;
 		int id;
 
@@ -25,6 +24,8 @@ namespace lsh
 
 		bool operator<(const srpPair& rhs) const { return val < rhs.val; }
 	};
+
+
 
 	// My implement for a simple sign random prejection LSH function class
 	class srp

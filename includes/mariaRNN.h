@@ -6,6 +6,16 @@
 #include "RNNDescent.h"
 #include "rnnd.h"
 
+// My class for store the information of a vertex
+// Do not directly define a vectex object
+// It is only for quickly computing the address shifting and increasing the readability
+struct vertex {
+	uint64_t hashval;
+	float norm;
+	int size;
+	uint32_t* links;
+};
+
 class mariaV6
 {
 	private:
@@ -423,21 +433,23 @@ class mariaV8
 {
 	private:
 	std::string index_file;
-	Partition parti;
+	Partition& parti;
 	std::vector<std::vector<std::vector<uint32_t>>> knngs;//edges in each block
+	lsh::srp* srp = nullptr;
 	rnnd::rnn_para para;
 	int* link_lists = nullptr;
 	Data data;
 	std::atomic<size_t> cost{ 0 };
-
+	int width = 20;
+	//The pairs of block that are connected to each other
 	struct block_pairs {
 		int block1_id = -1;
 		int block2_id = -1;
 		int S = 32;
-		int degree = 32;
-
+		int efC = 32;
+		std::vector<std::vector<int>> normal_edges;
 		block_pairs(int i, int j, int S_, int deg_) :
-			block1_id(i), block2_id(j), S(S_), degree(deg_) {}
+			block1_id(i), block2_id(j), S(S_), efC(deg_) {}
 	};
 
 
@@ -448,7 +460,8 @@ class mariaV8
 	// int S;
 	int L;
 	int K;
-
+	//int max_degree = -1;
+	int size_per_point = 4;
 	std::string alg_name = "mariaV8";
 
 	public:
@@ -472,7 +485,8 @@ class mariaV8
 	}
 
 	void buildIndex() {
-		lsh::srp srp(data, parti.EachParti, data.N, data.dim, L, K);
+		//lsh::srp srp(data, parti.EachParti, data.N, data.dim, L, K);
+		srp = new lsh::srp(data, parti.EachParti, data.N, data.dim, L, K);
 		knngs.resize(parti.numChunks);
 		lsh::timer timer;
 		float time = 0.0f;
@@ -494,7 +508,7 @@ class mariaV8
 				data_in_block.val[j] = data[id];
 			}
 			timer.restart();
-			srp.kjoin1(knns, parti.EachParti[i], i, para.S, 20);
+			srp->kjoin1(knns, parti.EachParti[i], i, para.S, width);
 			time += timer.elapsed();
 			rnnd::RNNDescent index(data_in_block, para);
 			// index.build(data_in_block.N, 0);
@@ -504,12 +518,30 @@ class mariaV8
 			cost += index.cost;
 		}
 
-#pragma omp parallel for schedule(dynamic)
+		std::cout << "NN Descent    TIME: " << timer.elapsed() << "s." << std::endl
+			<< std::endl;
+		timer.restart();
+		//std::vector<block_pairs> bps;
+		auto& bps = conn_blocks;
+		//#pragma omp parallel for schedule(dynamic)
 		for (int i = parti.numChunks - 1; i >= 0; --i) {
-
+			int init_S = 32;
+			int j = 1;
+			while (i - j >= 0) {
+				//int init_K = (2 * init_S + 32) / L;
+				int init_K = (2 * init_S + 32);
+				bps.emplace_back(i, i - j, init_S, init_K);
+				if (init_S > 1) init_S /= 2;
+			}
 		}
 
+#pragma omp parallel for schedule(dynamic)
+		for (int i = 0;i < bps.size();++i) {
+			interConnection(bps[i]);
+		}
 
+		std::cout << "Inter-Connect TIME: " << timer.elapsed() << "s." << std::endl
+			<< std::endl;
 
 		// std::cout << "CONSTRUCTING COST: " << (float)cost/N << std::endl;
 		// cost+=srp.getCost();
@@ -544,8 +576,51 @@ class mariaV8
 	}
 
 	//np1<np2
-	void interConnection(int np1, int np2) {
+	void interConnection(block_pairs& bp) {
+		std::vector<std::vector<Res>> knns;
+		srp->kjoin(knns, parti.EachParti[bp.block1_id], bp.block1_id,
+			parti.EachParti[bp.block2_id], bp.block2_id, para.S, width);
 
+		auto& knng2 = knngs[bp.block2_id];
+		bp.normal_edges.resize(parti.EachParti[bp.block1_id].size());
+		//std::vector<int> visited(knng2.size(), -1);
+#pragma omp parallel for schedule(dynamic,256)
+		for (int i = 0;i < knns.size();++i) {
+			float* q = data[parti.EachParti[bp.block1_id][i]];
+			std::priority_queue<Res> top_candidates, candidate_set;
+			std::vector<bool> visited(knng2.size(), false);
+			for (auto& res : knns[i]) {
+				top_candidates.push(res);
+				res.dist *= -1.0f;
+				candidate_set.push(res);
+				visited[res.id] = true;
+			}
+
+			while (top_candidates.size() > bp.efC) top_candidates.pop();
+
+			while (!candidate_set.empty()) {
+				auto top = candidate_set.top();
+				candidate_set.pop();
+				if (-top.dist > top_candidates.top().dist) break;
+				for (auto& u : knng2[top.id]) {
+					if (visited[u]) continue;
+					visited[u] = true;
+					float dist = cal_inner_product(q, data[parti.EachParti[bp.block2_id][u]], dim);
+					candidate_set.emplace(u, dist);
+					top_candidates.emplace(u, -dist);
+					if (top_candidates.size() > bp.efC) top_candidates.pop();
+				}
+			}
+
+			while (top_candidates.size() > bp.S) top_candidates.pop();
+
+			bp.normal_edges[i].reserve(top_candidates.size());
+			for (int j = 0;j < top_candidates.size();++j) {
+				auto& top = top_candidates.top();
+				bp.normal_edges[i].push_back(top.id);
+				top_candidates.pop();
+			}
+		}
 	}
 
 	void searchInKnng(std::vector<std::vector<uint32_t>>& apg, std::vector<int>& ids, queryN* q, int start, int ef)
