@@ -22,7 +22,7 @@ std::string data_fold2 = data_fold + ("MIPS/");
 
 int main(int argc, char* argv[])
 {
-    std::string dataset = "audio2";
+    std::string dataset = "audio";
     if (argc > 1) {
         dataset = argv[1];
     }
@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
 
     //res.push_back(searchFunction(mariaV6, qs, prep));
     //res.push_back(searchFunction(mariaV7, qs, prep));
-    //res.push_back(searchFunction(mariaV8, qs, prep));
+    res.push_back(searchFunction(mariaV8, qs, prep));
     res.push_back(searchFunction(lm, qs, prep));
     saveAndShow(c, k_, dataset, res);
     //    timer11.restart();

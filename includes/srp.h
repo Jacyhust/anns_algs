@@ -559,6 +559,7 @@ namespace lsh
 					}
 					num_candidates += rpos[i] - lpos[i] - 1;
 				}
+				diff *= 2;
 			}
 
 			for (int i = 0;i < L;++i) {

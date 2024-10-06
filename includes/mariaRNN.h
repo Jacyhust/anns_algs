@@ -487,12 +487,12 @@ class mariaV8
 		para.T1 = 2;
 		para.T2 = 4;
 
-		para.S = 2;
-		para.T1 = 1;
-		para.T2 = 1;
+		//para.S = 2;
+		//para.T1 = 1;
+		//para.T2 = 1;
 
 		lsh::timer timer;
-		if (!exists_test(index_file)) {
+		if (1||!exists_test(index_file)) {
 			float mem = (float)getCurrentRSS() / (1024 * 1024);
 			buildIndex();
 			float memf = (float)getCurrentRSS() / (1024 * 1024);
@@ -559,7 +559,7 @@ class mariaV8
 
 		//std::vector<block_pairs> bps;
 		auto& bps = conn_blocks;
-		int SS = 1, KK = 1;
+		int SS = 32;
 		//#pragma omp parallel for schedule(dynamic)
 		for (int i = parti.numChunks - 1; i >= 0; --i) {
 			int init_S = SS;
@@ -787,7 +787,7 @@ class mariaV8
 			*pvsize = 0;
 		}
 
-		std::cout << "INITIALIZING  TIME: " << timer.elapsed() << "s." << std::endl;
+		std::cout << "INITIA  TIME: " << timer.elapsed() << "s." << std::endl;
 		timer.restart();
 
 		for (int i = 0;i < parti.numChunks;++i) {
@@ -805,7 +805,7 @@ class mariaV8
 			}
 		}
 
-		std::cout << "TANGENTIAL  TIME: " << timer.elapsed() << "s." << std::endl;
+		std::cout << "TANGEN  TIME: " << timer.elapsed() << "s." << std::endl;
 		timer.restart();
 
 		for (auto& bps : conn_blocks) {
@@ -835,9 +835,9 @@ class mariaV8
 		std::ofstream out(file, std::ios::binary);
 		out.write((char*)(&N), sizeof(int));
 		out.write((char*)(&size_per_point), sizeof(size_t));
-		out.write((char*)(link_lists), sizeof(int) * size_per_point * N);
+		out.write((char*)(link_lists), sizeof(char) * size_per_point * N);
 
-		float mem = sizeof(int) + sizeof(size_t) + sizeof(int) * size_per_point * N;
+		float mem = size_per_point * N;
 		mem /= (1 << 30);
 		std::cout << "size per p : " << size_per_point << std::endl;
 		std::cout << "File size  : " << mem << "GB." << std::endl;
@@ -853,7 +853,7 @@ class mariaV8
 		in.read((char*)(&N), sizeof(int));
 		in.read((char*)(&size_per_point), sizeof(size_t));
 		link_lists = new char[size_per_point * N];
-		in.read((char*)(link_lists), sizeof(int) * size_per_point * N);
+		in.read((char*)(link_lists), sizeof(char) * size_per_point * N);
 	}
 
 	~mariaV8()
@@ -895,7 +895,7 @@ class LiteMARIA {
 		in.read((char*)(&N), sizeof(int));
 		in.read((char*)(&size_per_point), sizeof(size_t));
 		link_lists = new char[size_per_point * N];
-		in.read((char*)(link_lists), sizeof(int) * size_per_point * N);
+		in.read((char*)(link_lists), sizeof(char) * size_per_point * N);
 	}
 
 
