@@ -1235,10 +1235,10 @@ class LiteMARIA
 
 	inline float estimatedIP(uint64_t* k1, uint64_t* k2, float norm) {
 		const float pi_bar = 3.14159265358979323846 / 64;
-		std::cout << "1st ele is:" << *k1 << std::endl;
-		std::cout << "2nd ele is:" << *k2 << std::endl;
-		std::cout << "norm    is:" << norm << std::endl;
-		std::cout << "diffcnt is:" << bitCounts(k1, k2) << std::endl;
+		// std::cout << "1st ele is:" << *k1 << std::endl;
+		// std::cout << "2nd ele is:" << *k2 << std::endl;
+		// std::cout << "norm    is:" << norm << std::endl;
+		// std::cout << "diffcnt is:" << bitCounts(k1, k2) << std::endl;
 		float cos_similarity = cos((float)(bitCounts(k1, k2)) * pi_bar);
 		return norm * cos_similarity;
 	}
@@ -1262,12 +1262,12 @@ class LiteMARIA
 		while (!(q->top_candidates.empty()))
 		{
 			auto top = q->top_candidates.top();
-			real_top.emplace(top);
+
 			int* vertex_u = link_lists + size_per_point * top.id;
 			float est_dist = estimatedIP(q_hash, (uint64_t*)(vertex_u), (*((float*)(vertex_u + 2))));
 			candidate_set.emplace(top.id, est_dist);
 			top_candidates.emplace(top.id, -est_dist);
-			
+			real_top.emplace(top);
 			q->top_candidates.pop();
 		}
 		real_top.swap(q->top_candidates);
@@ -1276,7 +1276,7 @@ class LiteMARIA
 
 		efS = 5000;
 		while (top_candidates.size() > efS) top_candidates.pop();
-		while (!candidate_set.empty()){
+		while (!candidate_set.empty()) {
 			auto top = candidate_set.top();
 			candidate_set.pop();
 			if (-top.dist > top_candidates.top().dist) break;
@@ -1301,7 +1301,7 @@ class LiteMARIA
 			}
 		}
 
-		while (!top_candidates.empty()){
+		while (!top_candidates.empty()) {
 			auto top = top_candidates.top();
 			float dist = cal_inner_product(q->queryPoint, data[top.id], data.dim);
 			q->top_candidates.emplace(top.id, -top.dist);
@@ -1311,7 +1311,7 @@ class LiteMARIA
 
 		q->res.clear();
 		q->res.reserve(q->top_candidates.size());
-		while (!q->top_candidates.empty()){
+		while (!q->top_candidates.empty()) {
 			auto top = q->top_candidates.top();
 			q->res.emplace_back(top.id, -top.dist);
 			q->top_candidates.pop();

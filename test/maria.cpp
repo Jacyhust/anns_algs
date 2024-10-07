@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
     Partition parti(c, prep);
     //mariaV6 mariaV6(prep.data, parti, L, K);
     //mariaV7 mariaV7(prep.data, parti, L, K);
-    //mariaV8 mariaV8(prep.data, prep.SquareLen, index_fold + argvStr[2] + "_maria", parti, L, K);
+    mariaV8 mariaV8(prep.data, prep.SquareLen, index_fold + argvStr[2] + "_maria", parti, L, K);
     LiteMARIA lm(prep.data, index_fold + argvStr[2] + "_maria", parti);
     //mariaV8.showInfo();
     //lm.showInfo();
