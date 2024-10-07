@@ -26,7 +26,7 @@ namespace lsh
 	};
 
 	struct hash_t {
-		void reset(int N_){
+		void reset(int N_) {
 			delete[] base;
 			N = N_;
 			base = new uint16_t[N * 4];
@@ -39,7 +39,7 @@ namespace lsh
 		~hash_t() {
 			delete[] base;
 		}
-	private:
+		private:
 		uint16_t* base = nullptr;
 		size_t N = 0;
 		//const int L = 4;
@@ -52,7 +52,7 @@ namespace lsh
 
 		//N * L;
 
-		
+
 
 		std::vector<std::vector<srpPair>> hash_tables;
 		std::vector<std::vector<int>>& part_map;
@@ -68,7 +68,7 @@ namespace lsh
 		// Dimension of the hash table
 		int K = 0;
 		float indexing_time = 0.0f;
-	public:
+		public:
 		//std::vector<std::vector<uint16_t>> hashvals;
 		//std::vector<uint16_t[4]> hashvals;
 
@@ -204,7 +204,7 @@ namespace lsh
 				hashvals[i][3] = 0;
 				for (int j = 0; j < L; ++j)
 				{
-					
+
 					for (int l = 0; l < K; ++l)
 					{
 						float val = cal_inner_product(data[i], rndAs + (j * K + l) * dim, dim);
@@ -512,16 +512,16 @@ namespace lsh
 				}
 			}
 
-			//#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
 			for (auto& pool : knns) {
 				std::sort(pool.begin(), pool.end());
 				// if (pool.size() > K) pool.resize(K);
 			}
 
-			//#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
 			for (auto& pool : knns) pool.erase(std::unique(pool.begin(), pool.end(), compareId), pool.end());
 
-			//#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
 			for (auto& pool : knns) {
 				if (pool.back().id == -1) pool.pop_back();
 				if (pool.size() > K) pool.resize(K);
@@ -687,7 +687,7 @@ namespace lsh
 			calQHash(q);
 			auto& table = hash_tables[np * L];
 			int pos = std::distance(table.begin(), std::upper_bound(table.begin(), table.end(), srpPair(-1, q->srpval[0])));
-			if (pos> 0) return part_map[np][table[pos - 1].id];
+			if (pos > 0) return part_map[np][table[pos - 1].id];
 			//if (pos - 1 >= 0) return part_map[np][table[pos - 1].id];
 			return part_map[np][table[pos].id];
 

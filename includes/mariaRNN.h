@@ -496,7 +496,7 @@ class mariaV8
 		// para.T2 = 1;
 
 		lsh::timer timer;
-		if (0 || !exists_test(index_file))
+		if (1 || !exists_test(index_file))
 		{
 			float mem = (float)getCurrentRSS() / (1024 * 1024);
 			buildIndex();
@@ -531,7 +531,8 @@ class mariaV8
 		lsh::timer timer;
 		float time = 0.0f;
 
-		//#pragma omp parallel for schedule(dynamic)
+		lsh::progress_display pd(N);
+#pragma omp parallel for schedule(dynamic)
 		for (int i = parti.numChunks - 1; i >= 0; --i)
 		{
 			if (parti.EachParti[i].size() < 100)
@@ -554,13 +555,14 @@ class mariaV8
 			// timer.restart();
 			srp->kjoin1(knns, parti.EachParti[i], i, para.S, width);
 			// time += timer.elapsed();
-			printf("Parameters for NND: S=%d, R=%d, T1=%d, T2=%d\n", para.S, para.R, para.T1, para.T2);
+			//printf("Parameters for NND: S=%d, R=%d, T1=%d, T2=%d\n", para.S, para.R, para.T1, para.T2);
 			rnnd::RNNDescent index(data_in_block, para);
-			index.build(data_in_block.N, 1);
+			index.build(data_in_block.N, 0);
 			//index.build(data_in_block.N, 0, knns);
 			index.extract_index_graph(knngs[i]);
 
 			cost += index.cost;
+			pd += data_in_block.N;
 		}
 
 		std::cout << "NN Descent TIME: " << timer.elapsed() << "s." << std::endl
@@ -571,6 +573,7 @@ class mariaV8
 		auto& bps = conn_blocks;
 		int SS = 32;
 		// #pragma omp parallel for schedule(dynamic)
+		size_t est_cost = 0;
 		for (int i = parti.numChunks - 1; i >= 0; --i)
 		{
 			int init_S = SS;
@@ -580,15 +583,18 @@ class mariaV8
 				// int init_K = (2 * init_S + 32) / L;
 				int init_K = (2 * init_S + SS);
 				bps.emplace_back(i - j, i, init_S, init_K);
+				est_cost += parti.EachParti[i].size() * init_S * (2 * L + para.S);
 				j *= 2;
 				if (init_S > 1)
 					init_S /= 2;
 			}
 		}
 
+		lsh::progress_display pd1(est_cost);
 		//#pragma omp parallel for schedule(dynamic)
 		for (int i = 0; i < bps.size(); ++i) {
-			interConnection(bps[i]);
+			interConnection1(bps[i]);
+			est_cost += parti.EachParti[bps[i].block2_id].size() * bps[i].S * (2 * L + para.S);
 		}
 
 		std::cout << "Inter-Connect TIME: " << timer.elapsed() << "s." << std::endl
@@ -602,8 +608,7 @@ class mariaV8
 	void bfConstruction(int i)
 	{
 		int n = parti.EachParti[i].size();
-		if (n <= 1)
-			return;
+		if (n <= 1) return;
 		std::vector<std::vector<Res>> nnset(n, std::vector<Res>(n, Res(-1, FLT_MAX)));
 #pragma omp parallel for schedule(dynamic)
 		for (int j = 0; j < n; ++j)
@@ -683,6 +688,49 @@ class mariaV8
 
 			while (top_candidates.size() > bp.S)
 				top_candidates.pop();
+
+			bp.normal_edges[i].reserve(top_candidates.size());
+			for (int j = 0; j < top_candidates.size(); ++j)
+			{
+				auto& top = top_candidates.top();
+				bp.normal_edges[i].push_back(top.id);
+				top_candidates.pop();
+			}
+		}
+	}
+
+	// np1<np2
+	void interConnection1(block_pairs& bp)
+	{
+		std::vector<std::vector<Res>> knns;
+		srp->kjoin(knns, parti.EachParti[bp.block1_id], bp.block1_id,
+			parti.EachParti[bp.block2_id], bp.block2_id, bp.S, bp.S);
+
+		auto& knng1 = knngs[bp.block1_id];
+		bp.normal_edges.resize(parti.EachParti[bp.block2_id].size());
+		// std::vector<int> visited(knng2.size(), -1);
+#pragma omp parallel for schedule(dynamic)
+		for (int i = 0; i < knns.size(); ++i)
+		{
+			float* q = data[parti.EachParti[bp.block2_id][i]];
+			std::priority_queue<Res> top_candidates, candidate_set;
+			std::vector<bool> visited(knng1.size(), false);
+			//knns[i].resize()
+			for (auto& res : knns[i]) {
+				if (visited[res.id]) continue;
+				visited[res.id] = true;
+				top_candidates.push(res);
+				//res.dist *= -1.0f;
+				//candidate_set.push(res);
+				for (auto& u : knng1[res.id]) {
+					if (visited[u]) continue;
+					visited[u] = true;
+					float dist = cal_inner_product(q, data[parti.EachParti[bp.block1_id][u]], dim);
+					//candidate_set.emplace(u, dist);
+					top_candidates.emplace(u, -dist);
+					if (top_candidates.size() > bp.S) top_candidates.pop();
+				}
+			}
 
 			bp.normal_edges[i].reserve(top_candidates.size());
 			for (int j = 0; j < top_candidates.size(); ++j)
@@ -1247,7 +1295,7 @@ class LiteMARIA
 		return norm * cos4bit_cnt[bitCounts(k1, k2)];
 	}
 
-	//With norm filtering
+	//With norm generation
 	void knn4(queryN* q)
 	{
 		lsh::timer timer;
@@ -1293,9 +1341,9 @@ class LiteMARIA
 				if (visited[u]) continue;
 				visited[u] = true;
 
-				//int* vertex_u = link_lists + size_per_point * u;
-				//float dist = estimatedIP(q_hash, (uint64_t*)(vertex_u), (*((float*)(vertex_u + 2))));
-				float dist = rand();
+				int* vertex_u = link_lists + size_per_point * u;
+				float dist = estimatedIP(q_hash, (uint64_t*)(vertex_u), (*((float*)(vertex_u + 2))));
+				//float dist = rand();
 
 				//float dist = cal_inner_product(q->queryPoint, data[u], data.dim);
 				//q->cost++;
@@ -1320,6 +1368,150 @@ class LiteMARIA
 			auto top = q->top_candidates.top();
 			q->res.emplace_back(top.id, -top.dist);
 			q->top_candidates.pop();
+		}
+
+		q->time_total = timer.elapsed();
+		std::reverse(q->res.begin(), q->res.end());
+		std::vector<bool>().swap(q->visited);
+	}
+
+	//With norm filtering
+	void knn5(queryN* q)
+	{
+		lsh::timer timer;
+		std::priority_queue<Res> top_candidates, candidate_set;
+		std::vector<bool>& visited = q->visited;
+		visited.resize(data.N, false);
+		srp->knn(q);
+		uint64_t* q_hash = (uint64_t*)(q->srpval);
+		/*while (top_candidates.size() > q->k)
+			top_candidates.pop();*/
+
+
+		int efS = q->k + ef;
+		efS = 180;
+		std::priority_queue<Res> real_top;
+		while (!(q->top_candidates.empty()))
+		{
+			auto top = q->top_candidates.top();
+
+			int* vertex_u = link_lists + size_per_point * top.id;
+			float est_dist = estimatedIP(q_hash, (uint64_t*)(vertex_u), (*((float*)(vertex_u + 2))));
+			candidate_set.emplace(top.id, est_dist);
+			top_candidates.emplace(top.id, -est_dist);
+			real_top.emplace(top.id, top.dist);
+			q->top_candidates.pop();
+		}
+		//real_top.swap(q->top_candidates);
+		//q->top_candidates = real_top;
+
+		while (q->top_candidates.size() > q->k) q->top_candidates.pop();
+
+		efS = 6000;
+		while (top_candidates.size() > efS) top_candidates.pop();
+		while (!candidate_set.empty()) {
+			auto top = candidate_set.top();
+			candidate_set.pop();
+			if (-top.dist > top_candidates.top().dist) break;
+			int* v = (link_lists + size_per_point * top.id);
+			//int size = *((int*)(v + 3));
+			int* links = (v + 4);
+			for (int i = 0; i < v[3]; ++i) {
+				auto& u = links[i];
+				if (visited[u]) continue;
+				visited[u] = true;
+
+				int* vertex_u = link_lists + size_per_point * u;
+				float dist = estimatedIP(q_hash, (uint64_t*)(vertex_u), (*((float*)(vertex_u + 2))));
+				//float dist = rand();
+
+				//float dist = cal_inner_product(q->queryPoint, data[u], data.dim);
+				//q->cost++;
+				candidate_set.emplace(u, dist);
+				top_candidates.emplace(u, -dist);
+				if (top_candidates.size() > efS)
+					top_candidates.pop();
+			}
+		}
+
+		while (!top_candidates.empty()) {
+			auto top = top_candidates.top();
+			float dist = cal_inner_product(q->queryPoint, data[top.id], data.dim);
+			q->top_candidates.emplace(top.id, -dist);
+			if (q->top_candidates.size() > q->k) q->top_candidates.pop();
+			top_candidates.pop();
+		}
+
+		q->res.clear();
+		q->res.reserve(q->top_candidates.size());
+		while (!q->top_candidates.empty()) {
+			auto top = q->top_candidates.top();
+			q->res.emplace_back(top.id, -top.dist);
+			q->top_candidates.pop();
+		}
+
+		q->time_total = timer.elapsed();
+		std::reverse(q->res.begin(), q->res.end());
+		std::vector<bool>().swap(q->visited);
+	}
+
+	// Search in SRP to generate better entry point
+	void knn6(queryN* q)
+	{
+		lsh::timer timer;
+		std::priority_queue<Res> top_candidates, candidate_set;
+		std::vector<bool>& visited = q->visited;
+		visited.resize(data.N, false);
+		srp->knn(q);
+		while (top_candidates.size() > q->k)
+			top_candidates.pop();
+
+
+		int efS = q->k + ef;
+		efS = 180;
+		while (!(q->top_candidates.empty())) {
+			auto top = q->top_candidates.top();
+			candidate_set.emplace(top.id, -top.dist);
+			top_candidates.emplace(top.id, top.dist);
+			q->top_candidates.pop();
+		}
+
+		while (top_candidates.size() > efS)
+			top_candidates.pop();
+
+		while (!candidate_set.empty())
+		{
+			auto top = candidate_set.top();
+			candidate_set.pop();
+			if (-top.dist > top_candidates.top().dist) break;
+			int* v = (link_lists + size_per_point * top.id);
+			//int size = *((int*)(v + 3));
+			int* links = (v + 4);
+			for (int i = 0; i < v[3]; ++i) {
+				auto& u = links[i];
+				if (visited[u]) continue;
+				visited[u] = true;
+				// if (*((float*)(link_lists + size_per_point * u + 2)) <
+				// 	-top_candidates.top().dist) continue;
+				float dist = cal_inner_product(q->queryPoint, data[u], data.dim);
+				q->cost++;
+				candidate_set.emplace(u, dist);
+				top_candidates.emplace(u, -dist);
+				if (top_candidates.size() > efS)
+					top_candidates.pop();
+			}
+		}
+
+		while (top_candidates.size() > q->k)
+			top_candidates.pop();
+
+		q->res.clear();
+		q->res.reserve(top_candidates.size());
+		while (!top_candidates.empty())
+		{
+			auto top = top_candidates.top();
+			q->res.emplace_back(top.id, -top.dist);
+			top_candidates.pop();
 		}
 
 		q->time_total = timer.elapsed();

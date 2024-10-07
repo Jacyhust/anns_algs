@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
     auto& queries = prep.queries;
 
     queries.N = 100;
-    int repeat = 100;
+    int repeat = 1000;
 #if defined(_DEBUG) || defined(_MSC_VER)
     repeat = 1;
 #endif // _DEBUG
@@ -99,6 +99,7 @@ int main(int argc, char* argv[])
     res.push_back(searchFunctionFn(lm, qs, prep, 2));
     res.push_back(searchFunctionFn(lm, qs, prep, 3));
     res.push_back(searchFunctionFn(lm, qs, prep, 4));
+    res.push_back(searchFunctionFn(lm, qs, prep, 6));
     //res.push_back(searchFunctionFn(lm, qs, prep, 2));
     saveAndShow(c, k_, dataset, res);
 

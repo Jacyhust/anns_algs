@@ -193,6 +193,20 @@ inline resOutput searchFunctionFn(algorithm& alg, std::vector<queryN> qs, Prepro
 			++pd;
 		}
 	}
+	else if (fn == 5) {
+#pragma omp parallel for schedule(dynamic)
+		for (int i = 0; i < nq; ++i) {
+			alg.knn5(&(qs[i]));
+			++pd;
+		}
+	}
+	else if (fn == 6) {
+#pragma omp parallel for schedule(dynamic)
+		for (int i = 0; i < nq; ++i) {
+			alg.knn6(&(qs[i]));
+			++pd;
+		}
+	}
 
 
 

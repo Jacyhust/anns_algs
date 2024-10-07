@@ -434,7 +434,7 @@ namespace rnnd
         }
 
         void build(const int n, bool verbose, std::vector<std::vector<Res>>& init_nns) {
-            if (verbose){
+            if (verbose) {
                 printf("Parameters: S=%d, R=%d, T1=%d, T2=%d\n", S, R, T1, T2);
             }
 
@@ -546,7 +546,7 @@ namespace rnnd
 
         void extract_index_graph(std::vector<std::vector<unsigned>>& idx_graph) {
             auto n{ ntotal };
-            printf("n = %d\n", n);
+            //printf("n = %d\n", n);
             idx_graph.clear();
             idx_graph.resize(n);
 #pragma omp parallel for

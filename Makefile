@@ -46,6 +46,7 @@ srp:./test/test_srp.cpp ./includes/RNNDescent.cpp
 
 maria:./test/maria.cpp ./includes/RNNDescent.cpp
 	@test -d ./indexes | mkdir -p ./indexes
+	@test -d ./results | mkdir -p ./results
 	$(CXX) $(CXXFLAGS) -o maria ./test/maria.cpp ./includes/RNNDescent.cpp
 
 

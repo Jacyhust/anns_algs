@@ -472,9 +472,9 @@ class queryN
 		queryPoint = prep.queries[id];
 		float dim = prep.data.dim;
 		norm = sqrt(cal_inner_product(queryPoint, queryPoint, prep.data.dim));
-		// for (int i = 0;i < dim;++i) {
-		// 	queryPoint[i] /= norm;
-		// }
+		for (int i = 0;i < dim;++i) {
+			queryPoint[i] /= norm;
+		}
 		//search();
 	}
 
@@ -488,9 +488,9 @@ class queryN
 		queryPoint = query;
 
 		norm = sqrt(cal_inner_product(queryPoint, queryPoint, dim));
-		// for (int i = 0;i < dim;++i) {
-		// 	queryPoint[i] /= norm;
-		// }
+		for (int i = 0;i < dim;++i) {
+			queryPoint[i] /= norm;
+		}
 		//search();
 	}
 	//void search();
