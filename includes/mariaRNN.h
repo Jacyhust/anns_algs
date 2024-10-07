@@ -525,7 +525,7 @@ class mariaV8
 	void buildIndex()
 	{
 		// lsh::srp srp(data, parti.EachParti, data.N, data.dim, L, K);
-		srp = new lsh::srp(data, parti.EachParti, index_file + "_srp", data.N, data.dim, L, K);
+		srp = new lsh::srp(data, parti.EachParti, index_file + "_srp", data.N, data.dim, L, K, 0);
 		// return;
 		knngs.resize(parti.numChunks);
 		lsh::timer timer;
@@ -586,7 +586,7 @@ class mariaV8
 			}
 		}
 
-#pragma omp parallel for schedule(dynamic)
+		//#pragma omp parallel for schedule(dynamic)
 		for (int i = 0; i < bps.size(); ++i) {
 			interConnection(bps[i]);
 		}
@@ -645,7 +645,7 @@ class mariaV8
 		auto& knng1 = knngs[bp.block1_id];
 		bp.normal_edges.resize(parti.EachParti[bp.block2_id].size());
 		// std::vector<int> visited(knng2.size(), -1);
-#pragma omp parallel for schedule(dynamic, 256)
+#pragma omp parallel for schedule(dynamic)
 		for (int i = 0; i < knns.size(); ++i)
 		{
 			float* q = data[parti.EachParti[bp.block2_id][i]];
@@ -1119,7 +1119,7 @@ class LiteMARIA
 		std::priority_queue<Res> top_candidates, candidate_set;
 		std::vector<bool>& visited = q->visited;
 		visited.resize(data.N, false);
-		srp->knn(q);
+		srp->knnFalse(q);
 		while (top_candidates.size() > q->k)
 			top_candidates.pop();
 
@@ -1185,7 +1185,7 @@ class LiteMARIA
 		efS = 180;
 
 		int ep = 0;
-		//ep = srp->getEntryPoint(q);
+		ep = srp->getEntryPoint(q);
 
 		float dist = cal_inner_product(q->queryPoint, data[ep], data.dim);
 		visited[ep] = true;

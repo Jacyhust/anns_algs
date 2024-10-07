@@ -87,6 +87,7 @@ int main(int argc, char* argv[])
     res.push_back(searchFunction(mariaV8, qs, prep));
     res.push_back(searchFunction(lm, qs, prep));
     res.push_back(searchFunctionFn(lm, qs, prep, 1));
+    res.push_back(searchFunctionFn(lm, qs, prep, 2));
     res.push_back(searchFunctionFn(lm, qs, prep, 3));
     //res.push_back(searchFunctionFn(lm, qs, prep, 2));
     saveAndShow(c, k_, dataset, res);
