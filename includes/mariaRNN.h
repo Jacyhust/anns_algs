@@ -1011,7 +1011,7 @@ class LiteMARIA
 		while (!(q->top_candidates.empty()))
 		{
 			auto top = q->top_candidates.top();
-			//candidate_set.emplace(top.id, -top.dist);
+			candidate_set.emplace(top.id, -top.dist);
 			top_candidates.emplace(top.id, top.dist);
 			q->top_candidates.pop();
 		}
@@ -1128,7 +1128,7 @@ class LiteMARIA
 		while (!(q->top_candidates.empty()))
 		{
 			auto top = q->top_candidates.top();
-			//candidate_set.emplace(top.id, -top.dist);
+			candidate_set.emplace(top.id, -top.dist);
 			top_candidates.emplace(top.id, top.dist);
 			q->top_candidates.pop();
 		}
@@ -1267,7 +1267,7 @@ class LiteMARIA
 			float est_dist = estimatedIP(q_hash, (uint64_t*)(vertex_u), (*((float*)(vertex_u + 2))));
 			candidate_set.emplace(top.id, est_dist);
 			top_candidates.emplace(top.id, -est_dist);
-			real_top.emplace(top.id,top.dist);
+			real_top.emplace(top.id, top.dist);
 			q->top_candidates.pop();
 		}
 		//real_top.swap(q->top_candidates);
