@@ -119,7 +119,7 @@ namespace rnnd
             gen_random(rng, nn_new.data(), (int)nn_new.size(), N);
         }
 
-        Nhood& operator=(const Nhood& other) 
+        Nhood& operator=(const Nhood& other)
         {
             M = other.M;
             std::copy(
@@ -202,9 +202,9 @@ namespace rnnd
         using KNNGraph = std::vector<Nhood>;
 
         Data data;
-        std::atomic<size_t> cost{0};
+        std::atomic<size_t> cost{ 0 };
 
-        explicit RNNDescent(Data& data_, rnn_para const& p) {
+        explicit RNNDescent(Data& data_, rnn_para const& para) {
             data = data_;
             ntotal = data.N;
             T1 = para.T1;
@@ -281,7 +281,7 @@ namespace rnnd
             {
                 std::mt19937 rng(random_seed * 7741 + omp_get_thread_num());
 #pragma omp for
-                for (int i = 0; i < ntotal; i++){
+                for (int i = 0; i < ntotal; i++) {
                     for (auto& x : init_nns[i]) {
                         graph[i].pool.emplace_back(x.id, x.dist, true);
                         std::make_heap(graph[i].pool.begin(), graph[i].pool.end());
@@ -353,9 +353,9 @@ namespace rnnd
                         //float distance = matrixOracle(nn.id, other_nn.id);
 
                         float distance = dist_t(data[nn.id], data[other_nn.id], data.dim);
-                        #if defined(COUNT_CC)
-                            cost++;
-                        #endif
+#if defined(COUNT_CC)
+                        cost++;
+#endif
                         if (distance < nn.distance)
                         {
                             ok = false;
@@ -433,7 +433,7 @@ namespace rnnd
             has_built = true;
         }
 
-        void build(const int n, bool verbose,std::vector<std::vector<Res>>& init_nns) {
+        void build(const int n, bool verbose, std::vector<std::vector<Res>>& init_nns) {
             if (verbose)
             {
                 printf("Parameters: S=%d, R=%d, T1=%d, T2=%d\n", S, R, T1, T2);
@@ -586,7 +586,7 @@ namespace rnnd
         std::vector<int> final_graph;
         std::vector<int> offsets;
 
-        rnn_para para;
+        //rnn_para para;
 
     };
 

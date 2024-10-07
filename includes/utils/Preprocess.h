@@ -293,7 +293,7 @@ class Partition
 		//Dist_id pair;
 		int N_ = prep.data.N;
 		int n;
-		int minsize = 2560000;
+		int minsize = 256;
 		for (int j = 0; j < N_; j++) {
 			distpairs.emplace_back(j, prep.SquareLen[j]);
 		}
@@ -488,6 +488,9 @@ class queryN
 		queryPoint = query;
 
 		norm = sqrt(cal_inner_product(queryPoint, queryPoint, dim));
+		for (int i = 0;i < dim;++i) {
+			queryPoint[i] /= norm;
+		}
 		//search();
 	}
 	//void search();

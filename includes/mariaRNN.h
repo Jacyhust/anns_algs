@@ -26,16 +26,16 @@
 
 class mariaV6
 {
-private:
+	private:
 	std::string index_file;
 	Partition parti;
 	std::vector<std::vector<std::vector<uint32_t>>> knngs;
 	rnndescent::rnn_para para;
-	std::atomic<size_t> cost{0};
-	char *link_lists = nullptr;
+	std::atomic<size_t> cost{ 0 };
+	char* link_lists = nullptr;
 	Data data;
 
-public:
+	public:
 	int N;
 	int dim;
 	// int S;
@@ -44,8 +44,8 @@ public:
 
 	std::string alg_name = "mariaV6";
 
-public:
-	mariaV6(Data &data_, Partition &part_, int L_, int K_) : parti(part_)
+	public:
+	mariaV6(Data& data_, Partition& part_, int L_, int K_) : parti(part_)
 	{
 		data = data_;
 		N = data.N;
@@ -62,7 +62,7 @@ public:
 		timer.restart();
 		buildIndex();
 		std::cout << "CONSTRUCTING TIME: " << timer.elapsed() << "s." << std::endl
-				  << std::endl;
+			<< std::endl;
 	}
 
 	void buildIndex()
@@ -99,15 +99,15 @@ public:
 		std::cout << "CONSTRUCTING COST: " << (float)cost / N << std::endl;
 	}
 
-	void searchInKnng(std::vector<std::vector<uint32_t>> &apg, std::vector<int> &ids, queryN *q, int start, int ef)
+	void searchInKnng(std::vector<std::vector<uint32_t>>& apg, std::vector<int>& ids, queryN* q, int start, int ef)
 	{
-		auto &nngraph = apg;
+		auto& nngraph = apg;
 		int cost = 0;
 		// std::cout<<"size of knng: "<<nngraph.size()<<std::endl;
 		// lsh::timer timer;
 		std::priority_queue<Res> accessed_candidates;
 
-		auto &top_candidates = q->top_candidates;
+		auto& top_candidates = q->top_candidates;
 
 		int n = nngraph.size();
 		std::vector<bool> visited(n, false);
@@ -124,7 +124,7 @@ public:
 				break;
 			accessed_candidates.pop();
 
-			for (auto &u : nngraph[top.id])
+			for (auto& u : nngraph[top.id])
 			{
 				if (visited[u])
 					continue;
@@ -152,7 +152,7 @@ public:
 		q->cost += cost;
 	}
 
-	void knn(queryN *q)
+	void knn(queryN* q)
 	{
 		lsh::timer timer;
 		timer.restart();
@@ -161,7 +161,7 @@ public:
 		for (int i = parti.numChunks - 1; i >= 0; --i)
 		{
 			if ((!q->top_candidates.empty()) && (-(q->top_candidates.top().dist)) >
-													q->norm * sqrt(parti.MaxLen[i]))
+				q->norm * sqrt(parti.MaxLen[i]))
 				break;
 
 			if (parti.EachParti[i].size() < 400)
@@ -169,8 +169,8 @@ public:
 				// break;
 				//  std::cout<<i<<","<<parti.EachParti[i].size()<<"..."<<std::endl;
 				//  exit(-1);
-				auto &top_candidates = q->top_candidates;
-				for (auto &x : parti.EachParti[i])
+				auto& top_candidates = q->top_candidates;
+				for (auto& x : parti.EachParti[i])
 				{
 					float dist = calInnerProductReverse(q->queryPoint, data[x], data.dim);
 
@@ -183,7 +183,7 @@ public:
 			}
 
 			// continue;
-			auto &knng = knngs[i];
+			auto& knng = knngs[i];
 
 			searchInKnng(knng, parti.EachParti[i], q, 0, ef);
 
@@ -204,7 +204,7 @@ public:
 			// }
 		}
 
-		auto &top_candidates = q->top_candidates;
+		auto& top_candidates = q->top_candidates;
 
 		q->res.resize(q->k);
 		int pos = q->k;
@@ -230,16 +230,16 @@ public:
 
 class mariaV7
 {
-private:
+	private:
 	std::string index_file;
 	Partition parti;
 	std::vector<std::vector<std::vector<uint32_t>>> knngs;
 	rnnd::rnn_para para;
-	int *link_lists = nullptr;
+	int* link_lists = nullptr;
 	Data data;
-	std::atomic<size_t> cost{0};
+	std::atomic<size_t> cost{ 0 };
 
-public:
+	public:
 	int N;
 	int dim;
 	// int S;
@@ -248,8 +248,8 @@ public:
 
 	std::string alg_name = "mariaV7";
 
-public:
-	mariaV7(Data &data_, Partition &part_, int L_, int K_) : parti(part_)
+	public:
+	mariaV7(Data& data_, Partition& part_, int L_, int K_) : parti(part_)
 	{
 		data = data_;
 		N = data.N;
@@ -266,7 +266,7 @@ public:
 		timer.restart();
 		buildIndex();
 		std::cout << "CONSTRUCTING TIME: " << timer.elapsed() << "s." << std::endl
-				  << std::endl;
+			<< std::endl;
 	}
 
 	void buildIndex()
@@ -277,7 +277,7 @@ public:
 		lsh::timer timer;
 		float time = 0.0f;
 
-#pragma omp parallel for schedule(dynamic)
+		//#pragma omp parallel for schedule(dynamic)
 		for (int i = parti.numChunks - 1; i >= 0; --i)
 		{
 			if (parti.EachParti[i].size() < 400)
@@ -286,19 +286,19 @@ public:
 			std::vector<std::vector<Res>> knns;
 			data_in_block.N = parti.EachParti[i].size();
 			data_in_block.dim = data.dim;
-			data_in_block.val = new float *[data_in_block.N];
+			data_in_block.val = new float* [data_in_block.N];
 
 			for (int j = 0; j < parti.EachParti[i].size(); ++j)
 			{
-				auto &id = parti.EachParti[i][j];
+				auto& id = parti.EachParti[i][j];
 				data_in_block.val[j] = data[id];
 			}
 			timer.restart();
 			srp.kjoin(knns, parti.EachParti[i], i, para.S, 20);
 			time += timer.elapsed();
 			rnnd::RNNDescent index(data_in_block, para);
-			// index.build(data_in_block.N, 0);
-			index.build(data_in_block.N, 0, knns);
+			index.build(data_in_block.N, 1);
+			//index.build(data_in_block.N, 1, knns);
 			index.extract_index_graph(knngs[i]);
 
 			cost += index.cost;
@@ -309,15 +309,15 @@ public:
 		std::cout << "SRP SEARCH COST (s): " << time << std::endl;
 	}
 
-	void searchInKnng(std::vector<std::vector<uint32_t>> &apg, std::vector<int> &ids, queryN *q, int start, int ef)
+	void searchInKnng(std::vector<std::vector<uint32_t>>& apg, std::vector<int>& ids, queryN* q, int start, int ef)
 	{
-		auto &nngraph = apg;
+		auto& nngraph = apg;
 		int cost = 0;
 		// std::cout<<"size of knng: "<<nngraph.size()<<std::endl;
 		// lsh::timer timer;
 		std::priority_queue<Res> accessed_candidates;
 
-		auto &top_candidates = q->top_candidates;
+		auto& top_candidates = q->top_candidates;
 
 		int n = nngraph.size();
 		std::vector<bool> visited(n, false);
@@ -334,7 +334,7 @@ public:
 				break;
 			accessed_candidates.pop();
 
-			for (auto &u : nngraph[top.id])
+			for (auto& u : nngraph[top.id])
 			{
 				if (visited[u])
 					continue;
@@ -362,7 +362,7 @@ public:
 		q->cost += cost;
 	}
 
-	void knn(queryN *q)
+	void knn(queryN* q)
 	{
 		lsh::timer timer;
 		timer.restart();
@@ -371,15 +371,15 @@ public:
 		for (int i = parti.numChunks - 1; i >= 0; --i)
 		{
 			if ((!q->top_candidates.empty()) && (-(q->top_candidates.top().dist)) >
-													q->norm * sqrt(parti.MaxLen[i]))
+				q->norm * sqrt(parti.MaxLen[i]))
 				break;
 
 			if (parti.EachParti[i].size() < 400)
 			{
 				// std::cout<<i<<","<<parti.EachParti[i].size()<<"..."<<std::endl;
 				// exit(-1);
-				auto &top_candidates = q->top_candidates;
-				for (auto &x : parti.EachParti[i])
+				auto& top_candidates = q->top_candidates;
+				for (auto& x : parti.EachParti[i])
 				{
 					float dist = calInnerProductReverse(q->queryPoint, data[x], data.dim);
 
@@ -393,7 +393,7 @@ public:
 			}
 
 			// continue;
-			auto &knng = knngs[i];
+			auto& knng = knngs[i];
 
 			searchInKnng(knng, parti.EachParti[i], q, 0, ef);
 
@@ -414,7 +414,7 @@ public:
 			// }
 		}
 
-		auto &top_candidates = q->top_candidates;
+		auto& top_candidates = q->top_candidates;
 
 		q->res.resize(q->k);
 		int pos = q->k;
@@ -440,15 +440,15 @@ public:
 
 class mariaV8
 {
-private:
+	private:
 	std::string index_file;
-	Partition &parti;
+	Partition& parti;
 	std::vector<std::vector<std::vector<uint32_t>>> knngs; // edges in each block
-	lsh::srp *srp = nullptr;
+	lsh::srp* srp = nullptr;
 	rnnd::rnn_para para;
-	int *link_lists = nullptr;
+	int* link_lists = nullptr;
 	Data data;
-	std::atomic<size_t> cost{0};
+	std::atomic<size_t> cost{ 0 };
 	int width = 20;
 	// The pairs of block that are connected to each other
 	struct block_pairs
@@ -463,7 +463,7 @@ private:
 
 	std::vector<block_pairs> conn_blocks;
 
-public:
+	public:
 	int N;
 	int dim;
 	// int S;
@@ -472,12 +472,12 @@ public:
 	// int max_degree = -1;
 	size_t size_per_point = 16;
 	float indexing_time = 0.0f;
-	float *square_norms = nullptr;
+	float* square_norms = nullptr;
 	std::string alg_name = "mariaV8";
 	// char* link_lists = nullptr;
 
-public:
-	mariaV8(Data &data_, float *norms, const std::string &file, Partition &part_, int L_, int K_) : parti(part_)
+	public:
+	mariaV8(Data& data_, float* norms, const std::string& file, Partition& part_, int L_, int K_) : parti(part_)
 	{
 		data = data_;
 		square_norms = norms;
@@ -503,7 +503,7 @@ public:
 			float memf = (float)getCurrentRSS() / (1024 * 1024);
 			indexing_time = timer.elapsed();
 			std::cout << "MARIA Building time:" << indexing_time << "  seconds.\n";
-			FILE *fp = nullptr;
+			FILE* fp = nullptr;
 			fopen_s(&fp, "./indexes/maria_info.txt", "a");
 			if (fp)
 				fprintf(fp, "%s\nmemory=%f MB, IndexingTime=%f s.\n\n", index_file.c_str(), memf - mem, indexing_time);
@@ -531,7 +531,7 @@ public:
 		lsh::timer timer;
 		float time = 0.0f;
 
-//#pragma omp parallel for schedule(dynamic)
+		//#pragma omp parallel for schedule(dynamic)
 		for (int i = parti.numChunks - 1; i >= 0; --i)
 		{
 			if (parti.EachParti[i].size() < 100)
@@ -544,30 +544,31 @@ public:
 			std::vector<std::vector<Res>> knns;
 			data_in_block.N = parti.EachParti[i].size();
 			data_in_block.dim = data.dim;
-			data_in_block.val = new float *[data_in_block.N];
+			data_in_block.val = new float* [data_in_block.N];
 
 			for (int j = 0; j < parti.EachParti[i].size(); ++j)
 			{
-				auto &id = parti.EachParti[i][j];
+				auto& id = parti.EachParti[i][j];
 				data_in_block.val[j] = data[id];
 			}
 			// timer.restart();
 			srp->kjoin1(knns, parti.EachParti[i], i, para.S, width);
 			// time += timer.elapsed();
+			printf("Parameters for NND: S=%d, R=%d, T1=%d, T2=%d\n", para.S, para.R, para.T1, para.T2);
 			rnnd::RNNDescent index(data_in_block, para);
-			// index.build(data_in_block.N, 0);
-			index.build(data_in_block.N, 0, knns);
+			index.build(data_in_block.N, 1);
+			//index.build(data_in_block.N, 0, knns);
 			index.extract_index_graph(knngs[i]);
 
 			cost += index.cost;
 		}
 
-		std::cout << "NN Descent    TIME: " << timer.elapsed() << "s." << std::endl
-				  << std::endl;
+		std::cout << "NN Descent TIME: " << timer.elapsed() << "s." << std::endl
+			<< std::endl;
 		timer.restart();
 
 		// std::vector<block_pairs> bps;
-		auto &bps = conn_blocks;
+		auto& bps = conn_blocks;
 		int SS = 32;
 		// #pragma omp parallel for schedule(dynamic)
 		for (int i = parti.numChunks - 1; i >= 0; --i)
@@ -586,13 +587,12 @@ public:
 		}
 
 #pragma omp parallel for schedule(dynamic)
-		for (int i = 0; i < bps.size(); ++i)
-		{
+		for (int i = 0; i < bps.size(); ++i) {
 			interConnection(bps[i]);
 		}
 
 		std::cout << "Inter-Connect TIME: " << timer.elapsed() << "s." << std::endl
-				  << std::endl;
+			<< std::endl;
 
 		// std::cout << "CONSTRUCTING COST: " << (float)cost/N << std::endl;
 		// cost+=srp.getCost();
@@ -621,7 +621,7 @@ public:
 		{
 			std::sort(nnset[j].begin(), nnset[j].end());
 		}
-		auto &apg = knngs[i];
+		auto& apg = knngs[i];
 		int size = para.S;
 		if (size > n)
 			size = n - 1;
@@ -636,22 +636,22 @@ public:
 	}
 
 	// np1<np2
-	void interConnection(block_pairs &bp)
+	void interConnection(block_pairs& bp)
 	{
 		std::vector<std::vector<Res>> knns;
 		srp->kjoin(knns, parti.EachParti[bp.block1_id], bp.block1_id,
-				   parti.EachParti[bp.block2_id], bp.block2_id, para.S, width);
+			parti.EachParti[bp.block2_id], bp.block2_id, para.S, width);
 
-		auto &knng1 = knngs[bp.block1_id];
+		auto& knng1 = knngs[bp.block1_id];
 		bp.normal_edges.resize(parti.EachParti[bp.block2_id].size());
 		// std::vector<int> visited(knng2.size(), -1);
 #pragma omp parallel for schedule(dynamic, 256)
 		for (int i = 0; i < knns.size(); ++i)
 		{
-			float *q = data[parti.EachParti[bp.block2_id][i]];
+			float* q = data[parti.EachParti[bp.block2_id][i]];
 			std::priority_queue<Res> top_candidates, candidate_set;
 			std::vector<bool> visited(knng1.size(), false);
-			for (auto &res : knns[i])
+			for (auto& res : knns[i])
 			{
 				top_candidates.push(res);
 				res.dist *= -1.0f;
@@ -668,7 +668,7 @@ public:
 				candidate_set.pop();
 				if (-top.dist > top_candidates.top().dist)
 					break;
-				for (auto &u : knng1[top.id])
+				for (auto& u : knng1[top.id])
 				{
 					if (visited[u])
 						continue;
@@ -687,19 +687,19 @@ public:
 			bp.normal_edges[i].reserve(top_candidates.size());
 			for (int j = 0; j < top_candidates.size(); ++j)
 			{
-				auto &top = top_candidates.top();
+				auto& top = top_candidates.top();
 				bp.normal_edges[i].push_back(top.id);
 				top_candidates.pop();
 			}
 		}
 	}
 
-	void searchInKnng(std::vector<std::vector<uint32_t>> &apg, std::vector<int> &ids, queryN *q, int start, int ef)
+	void searchInKnng(std::vector<std::vector<uint32_t>>& apg, std::vector<int>& ids, queryN* q, int start, int ef)
 	{
-		auto &nngraph = apg;
+		auto& nngraph = apg;
 		int cost = 0;
 		std::priority_queue<Res> accessed_candidates;
-		auto &top_candidates = q->top_candidates;
+		auto& top_candidates = q->top_candidates;
 		int n = nngraph.size();
 		std::vector<bool> visited(n, false);
 		visited[start] = true;
@@ -715,7 +715,7 @@ public:
 				break;
 			accessed_candidates.pop();
 
-			for (auto &u : nngraph[top.id])
+			for (auto& u : nngraph[top.id])
 			{
 				if (visited[u])
 					continue;
@@ -734,7 +734,7 @@ public:
 		q->cost += cost;
 	}
 
-	void knn(queryN *q)
+	void knn(queryN* q)
 	{
 		lsh::timer timer;
 		timer.restart();
@@ -743,15 +743,15 @@ public:
 		for (int i = parti.numChunks - 1; i >= 0; --i)
 		{
 			if ((!q->top_candidates.empty()) && (-(q->top_candidates.top().dist)) >
-													q->norm * sqrt(parti.MaxLen[i]))
+				q->norm * sqrt(parti.MaxLen[i]))
 				break;
 
 			if (parti.EachParti[i].size() < 400)
 			{
 				// std::cout<<i<<","<<parti.EachParti[i].size()<<"..."<<std::endl;
 				// exit(-1);
-				auto &top_candidates = q->top_candidates;
-				for (auto &x : parti.EachParti[i])
+				auto& top_candidates = q->top_candidates;
+				for (auto& x : parti.EachParti[i])
 				{
 					float dist = calInnerProductReverse(q->queryPoint, data[x], data.dim);
 
@@ -765,14 +765,14 @@ public:
 			}
 
 			// continue;
-			auto &knng = knngs[i];
+			auto& knng = knngs[i];
 
 			searchInKnng(knng, parti.EachParti[i], q, 0, ef);
 
 			// break;
 		}
 
-		auto &top_candidates = q->top_candidates;
+		auto& top_candidates = q->top_candidates;
 
 		q->res.resize(q->k);
 		int pos = q->k;
@@ -820,9 +820,9 @@ public:
 		for (int i = 0;i < N;++i) {
 			int* v = link_lists + size_per_point * i;
 			//memcpy((void*)(v), (void*)(srp->hashvals[i].data()), sizeof(uint64_t));//v->hashval has the same address with v
-			//memcpy(reinterpret_cast<void*>(v), reinterpret_cast<void*>(srp->hashvals[i].data()), sizeof(uint64_t));
-			//float* pvnorm = (float*)(v + 2);
-			//*pvnorm = sqrt(square_norms[i]);
+			memcpy(reinterpret_cast<void*>(v), reinterpret_cast<void*>(srp->hashvals[i].data()), sizeof(uint64_t));
+			float* pvnorm = (float*)(v + 2);
+			*pvnorm = sqrt(square_norms[i]);
 			v[3] = 0;
 			//int* pvsize = (int*)(v + 3);
 			//*pvsize = 0;
@@ -833,20 +833,20 @@ public:
 
 		for (int i = 0; i < parti.numChunks; ++i)
 		{
-			auto &knng = knngs[i];
-			auto &ids = parti.EachParti[i];
-//#pragma omp parallel for schedule(dynamic, 256)
+			auto& knng = knngs[i];
+			auto& ids = parti.EachParti[i];
+			//#pragma omp parallel for schedule(dynamic, 256)
 			for (int j = 0; j < knng.size(); ++j)
 			{
 				int id1 = ids[j];
-				int *v = (link_lists + size_per_point * id1);
-				int *links = (v + 4);
-				for (auto &u : knng[j])
+				int* v = (link_lists + size_per_point * id1);
+				int* links = (v + 4);
+				for (auto& u : knng[j])
 				{
-					
+
 					//int *size = ((int *)(v + 3));
 					links[(v[3])] = ids[u];
-					v[3]=v[3]+1;
+					v[3] = v[3] + 1;
 				}
 			}
 		}
@@ -854,38 +854,38 @@ public:
 		std::cout << "TANGEN  TIME: " << timer.elapsed() << "s." << std::endl;
 		timer.restart();
 
-// 		for (auto &bps : conn_blocks)
-// 		{
-// 			auto &ids1 = parti.EachParti[bps.block1_id];
-// 			auto &ids2 = parti.EachParti[bps.block2_id];
-// 			auto &knng = bps.normal_edges;
-// #pragma omp parallel for schedule(dynamic, 256)
-// 			for (int j = 0; j < knng.size(); ++j)
-// 			{
-// 				int id1 = ids2[j];
-// 				// vertex* v = (vertex*)(link_lists + size_per_point * id1);
-// 				int *v = (link_lists + size_per_point * id1);
-// 				int *links = (v + 4);
-// 				int *size = ((int *)(v + 3));
-// 				for (auto &u : knng[j])
-// 				{
-// 					// v->links[v->size++] = ids2[u];
+		for (auto& bps : conn_blocks)
+		{
+			auto& ids1 = parti.EachParti[bps.block1_id];
+			auto& ids2 = parti.EachParti[bps.block2_id];
+			auto& knng = bps.normal_edges;
+#pragma omp parallel for schedule(dynamic, 256)
+			for (int j = 0; j < knng.size(); ++j)
+			{
+				int id1 = ids2[j];
+				// vertex* v = (vertex*)(link_lists + size_per_point * id1);
+				int* v = (link_lists + size_per_point * id1);
+				int* links = (v + 4);
+				int* size = ((int*)(v + 3));
+				for (auto& u : knng[j])
+				{
+					// v->links[v->size++] = ids2[u];
 
-// 					links[(*size)++] = ids1[u];
-// 					// auto& size = *((int*)(v + 12));
-// 					// links[size++] = ids2[u];
-// 				}
-// 			}
-// 		}
+					links[(*size)++] = ids1[u];
+					// auto& size = *((int*)(v + 12));
+					// links[size++] = ids2[u];
+				}
+			}
+		}
 
-// 		std::cout << "NORMAL TIME: " << timer.elapsed() << "s." << std::endl;
-// 		timer.restart();
+		std::cout << "NORMAL TIME: " << timer.elapsed() << "s." << std::endl;
+		timer.restart();
 
 		std::string file = index_file;
 		std::ofstream out(file, std::ios::binary);
-		out.write((char *)(&N), sizeof(int));
-		out.write((char *)(&size_per_point), sizeof(size_t));
-		out.write((char *)(link_lists), sizeof(int) * size_per_point * N);
+		out.write((char*)(&N), sizeof(int));
+		out.write((char*)(&size_per_point), sizeof(size_t));
+		out.write((char*)(link_lists), sizeof(int) * size_per_point * N);
 
 		float mem = size_per_point * N * 4;
 		mem /= (1 << 30);
@@ -894,17 +894,17 @@ public:
 		std::cout << "SAVING TIME: " << timer.elapsed() << "s." << std::endl;
 	}
 
-	void loadIndex(const std::string &file)
+	void loadIndex(const std::string& file)
 	{
 		std::ifstream in(file, std::ios::binary);
 		if (!in.good())
 		{
 			std::cerr << "Cannot open file:" << file << std::endl;
 		}
-		in.read((char *)(&N), sizeof(int));
-		in.read((char *)(&size_per_point), sizeof(size_t));
+		in.read((char*)(&N), sizeof(int));
+		in.read((char*)(&size_per_point), sizeof(size_t));
 		link_lists = new int[size_per_point * N];
-		in.read((char *)(link_lists), sizeof(int) * size_per_point * N);
+		in.read((char*)(link_lists), sizeof(int) * size_per_point * N);
 	}
 
 	void showInfo()
@@ -921,10 +921,10 @@ public:
 					break;
 			}
 
-			printf("point-%d has %d neighbors:\n",i,knng[j].size());
+			printf("point-%d has %d neighbors:\n", i, knng[j].size());
 
-			for(auto& x:knng[j]){
-				printf("%d\t",ids[x]);
+			for (auto& x : knng[j]) {
+				printf("%d\t", ids[x]);
 			}
 			printf("\n");
 		}
@@ -941,18 +941,18 @@ public:
 
 class LiteMARIA
 {
-public:
+	public:
 	std::string alg_name = "LiteMaria";
-	int *link_lists = nullptr;
+	int* link_lists = nullptr;
 	size_t size_per_point = 16;
-	lsh::srp *srp = nullptr;
+	lsh::srp* srp = nullptr;
 	Data data;
 	int N = 0;
 
-public:
+	public:
 	int ef = 200;
 	// Only allow to initialize this class by reading the file
-	LiteMARIA(Data &data_, const std::string &file, Partition &parti)
+	LiteMARIA(Data& data_, const std::string& file, Partition& parti)
 	{
 		data = data_;
 		srp = new lsh::srp(data, parti.EachParti, file + "_srp", data.N, data.dim);
@@ -963,15 +963,15 @@ public:
 		std::cout << "Actual memory usage: " << memf - mem << " Mb \n";
 	}
 
-	void loadIndex(const std::string &file)
+	void loadIndex(const std::string& file)
 	{
 		std::ifstream in(file, std::ios::binary);
 		if (!in.good())
 		{
 			std::cerr << "Cannot open file:" << file << std::endl;
 		}
-		in.read((char *)(&N), sizeof(int));
-		in.read((char *)(&size_per_point), sizeof(size_t));
+		in.read((char*)(&N), sizeof(int));
+		in.read((char*)(&size_per_point), sizeof(size_t));
 		link_lists = new int[size_per_point * N];
 		in.read((char*)(link_lists), size_per_point * sizeof(int) * N);
 	}
@@ -983,28 +983,36 @@ public:
 		//auto ids = parti.EachParti[0];
 		for (int i = 0; i < 10; ++i)
 		{
-			int *v = (link_lists + size_per_point * i);
+			int* v = (link_lists + size_per_point * i);
 
-			printf("point-%d has %d neighbors:\n",i,v[3]);
+			printf("point-%d has %d neighbors:\n", i, v[3]);
 
-			for(int j=0;j<v[3];++j){
-				printf("%d\t",v[j+4]);
+			for (int j = 0;j < v[3];++j) {
+				printf("%d\t", v[j + 4]);
 			}
 			printf("\n");
 		}
 	}
 
-	void knn(queryN *q)
+	// Search in SRP to generate better entry point
+	void knn(queryN* q)
 	{
+		lsh::timer timer;
 		std::priority_queue<Res> top_candidates, candidate_set;
+		std::vector<bool>& visited = q->visited;
+		visited.resize(data.N, false);
 		srp->knn(q);
-		std::vector<bool> &visited = q->visited;
+		while (top_candidates.size() > q->k)
+			top_candidates.pop();
+
+
 		int efS = q->k + ef;
+		efS = 180;
 		while (!(q->top_candidates.empty()))
 		{
 			auto top = q->top_candidates.top();
 			candidate_set.emplace(top.id, -top.dist);
-			top_candidates.emplace(top.id,top.dist);
+			top_candidates.emplace(top.id, top.dist);
 			q->top_candidates.pop();
 		}
 
@@ -1024,6 +1032,7 @@ public:
 				if (visited[u]) continue;
 				visited[u] = true;
 				float dist = cal_inner_product(q->queryPoint, data[u], data.dim);
+				q->cost++;
 				candidate_set.emplace(u, dist);
 				top_candidates.emplace(u, -dist);
 				if (top_candidates.size() > efS)
@@ -1042,7 +1051,184 @@ public:
 			q->res.emplace_back(top.id, -top.dist);
 			top_candidates.pop();
 		}
-		//std::reverse(q->res.begin(), q->res.end());
-		//std::vector<bool>().swap(q->visited);
+
+		q->time_total = timer.elapsed();
+		std::reverse(q->res.begin(), q->res.end());
+		std::vector<bool>().swap(q->visited);
+	}
+
+	//Totally random enry point
+	void knn1(queryN* q) {
+		lsh::timer timer;
+		std::priority_queue<Res> top_candidates, candidate_set;
+		std::vector<bool>& visited = q->visited;
+		visited.resize(data.N, false);
+		int efS = q->k + ef;
+		efS = 180;
+
+
+		float dist = cal_inner_product(q->queryPoint, data[0], data.dim);
+		visited[0] = true;
+		q->cost++;
+		candidate_set.emplace(0, dist);
+		top_candidates.emplace(0, -dist);
+
+
+		while (!candidate_set.empty())
+		{
+			auto top = candidate_set.top();
+			candidate_set.pop();
+			if (-top.dist > top_candidates.top().dist) break;
+			int* v = (link_lists + size_per_point * top.id);
+			//int size = *((int*)(v + 3));
+			int* links = (v + 4);
+			for (int i = 0; i < v[3]; ++i) {
+				auto& u = links[i];
+				if (visited[u]) continue;
+				visited[u] = true;
+				float dist = cal_inner_product(q->queryPoint, data[u], data.dim);
+				q->cost++;
+				candidate_set.emplace(u, dist);
+				top_candidates.emplace(u, -dist);
+				if (top_candidates.size() > efS)
+					top_candidates.pop();
+			}
+		}
+
+		while (top_candidates.size() > q->k)
+			top_candidates.pop();
+
+		q->res.clear();
+		q->res.reserve(top_candidates.size());
+		while (!top_candidates.empty())
+		{
+			auto top = top_candidates.top();
+			q->res.emplace_back(top.id, -top.dist);
+			top_candidates.pop();
+		}
+
+		q->time_total = timer.elapsed();
+		std::reverse(q->res.begin(), q->res.end());
+		std::vector<bool>().swap(q->visited);
+	}
+
+	//To be designed
+	void knn2(queryN* q)
+	{
+		lsh::timer timer;
+		std::priority_queue<Res> top_candidates, candidate_set;
+		std::vector<bool>& visited = q->visited;
+		visited.resize(data.N, false);
+		srp->knn(q);
+		while (top_candidates.size() > q->k)
+			top_candidates.pop();
+
+		int efS = q->k + ef;
+		efS = 180;
+		while (!(q->top_candidates.empty()))
+		{
+			auto top = q->top_candidates.top();
+			candidate_set.emplace(top.id, -top.dist);
+			top_candidates.emplace(top.id, top.dist);
+			q->top_candidates.pop();
+		}
+
+		while (top_candidates.size() > efS)
+			top_candidates.pop();
+
+		while (!candidate_set.empty())
+		{
+			auto top = candidate_set.top();
+			candidate_set.pop();
+			if (-top.dist > top_candidates.top().dist) break;
+			int* v = (link_lists + size_per_point * top.id);
+			//int size = *((int*)(v + 3));
+			int* links = (v + 4);
+			for (int i = 0; i < v[3]; ++i) {
+				auto& u = links[i];
+				if (visited[u]) continue;
+				visited[u] = true;
+				float dist = cal_inner_product(q->queryPoint, data[u], data.dim);
+				q->cost++;
+				candidate_set.emplace(u, dist);
+				top_candidates.emplace(u, -dist);
+				if (top_candidates.size() > efS)
+					top_candidates.pop();
+			}
+		}
+
+		while (top_candidates.size() > q->k)
+			top_candidates.pop();
+
+		q->res.clear();
+		q->res.reserve(top_candidates.size());
+		while (!top_candidates.empty())
+		{
+			auto top = top_candidates.top();
+			q->res.emplace_back(top.id, -top.dist);
+			top_candidates.pop();
+		}
+
+		q->time_total = timer.elapsed();
+		std::reverse(q->res.begin(), q->res.end());
+		std::vector<bool>().swap(q->visited);
+	}
+
+	//Choose an entry point in block 1 quickly
+	void knn3(queryN* q)
+	{
+		lsh::timer timer;
+		std::priority_queue<Res> top_candidates, candidate_set;
+		std::vector<bool>& visited = q->visited;
+		visited.resize(data.N, false);
+		int efS = q->k + ef;
+		efS = 180;
+
+		int ep = 0;
+		//ep = srp->getEntryPoint(q);
+
+		float dist = cal_inner_product(q->queryPoint, data[ep], data.dim);
+		visited[ep] = true;
+		q->cost++;
+		candidate_set.emplace(ep, dist);
+		top_candidates.emplace(ep, -dist);
+
+
+		while (!candidate_set.empty())
+		{
+			auto top = candidate_set.top();
+			candidate_set.pop();
+			if (-top.dist > top_candidates.top().dist) break;
+			int* v = (link_lists + size_per_point * top.id);
+			//int size = *((int*)(v + 3));
+			int* links = (v + 4);
+			for (int i = 0; i < v[3]; ++i) {
+				auto& u = links[i];
+				if (visited[u]) continue;
+				visited[u] = true;
+				float dist = cal_inner_product(q->queryPoint, data[u], data.dim);
+				q->cost++;
+				candidate_set.emplace(u, dist);
+				top_candidates.emplace(u, -dist);
+				if (top_candidates.size() > efS)
+					top_candidates.pop();
+			}
+		}
+
+		while (top_candidates.size() > q->k)
+			top_candidates.pop();
+
+		q->res.clear();
+		q->res.reserve(top_candidates.size());
+		while (!top_candidates.empty())
+		{
+			auto top = top_candidates.top();
+			q->res.emplace_back(top.id, -top.dist);
+			top_candidates.pop();
+		}
+
+		q->time_total = timer.elapsed();
+		std::reverse(q->res.begin(), q->res.end());
+		std::vector<bool>().swap(q->visited);
 	}
 };

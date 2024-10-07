@@ -208,7 +208,7 @@ namespace lsh
 				for (int l = 0; l < part.size(); ++l)
 				{
 					int id = part[l];
-					for (int j = 0; j < L; ++j){
+					for (int j = 0; j < L; ++j) {
 						hash_tables[i * L + j].emplace_back(l, hashvals[id][j]);
 					}
 				}
@@ -371,7 +371,7 @@ namespace lsh
 		void kjoin1(std::vector<std::vector<Res>>& knns, std::vector<int>& ids, int np, int K, int width)
 		{
 			int n = hash_tables[np * L].size();
-			if (n < 2 * width){
+			if (n < 2 * width) {
 				std::cerr << "The hash table has not enough points!" << std::endl;
 				return;
 			}
@@ -380,7 +380,7 @@ namespace lsh
 			knns.resize(n, std::vector<Res>(L * lc, Res(-1, FLT_MAX)));
 
 #pragma omp parallel for
-			for (int i = np * L; i < np * L + L; ++i){
+			for (int i = np * L; i < np * L + L; ++i) {
 				auto& table = hash_tables[i];
 				int bias = (i - np * L) * lc + width;
 				for (int j = 0; j < width; ++j)
@@ -483,16 +483,16 @@ namespace lsh
 				}
 			}
 
-//#pragma omp parallel for schedule(dynamic)
+			//#pragma omp parallel for schedule(dynamic)
 			for (auto& pool : knns) {
 				std::sort(pool.begin(), pool.end());
 				// if (pool.size() > K) pool.resize(K);
 			}
 
-//#pragma omp parallel for schedule(dynamic)
+			//#pragma omp parallel for schedule(dynamic)
 			for (auto& pool : knns) pool.erase(std::unique(pool.begin(), pool.end(), compareId), pool.end());
 
-//#pragma omp parallel for schedule(dynamic)
+			//#pragma omp parallel for schedule(dynamic)
 			for (auto& pool : knns) {
 				if (pool.back().id == -1) pool.pop_back();
 				if (pool.size() > K) pool.resize(K);
@@ -516,9 +516,9 @@ namespace lsh
 		void knn(queryN*& q) {
 			int np = part_map.size() - 1;
 			int cnt = 0;
-			int ub=200;
+			int ub = 200;
 			std::vector<bool>& visited = q->visited;
-			visited.resize(data.N, false);
+
 			int size = part_map[np].size();
 			if (part_map[np].size() < ub) {
 				for (auto& u : part_map[np]) {
@@ -528,6 +528,8 @@ namespace lsh
 
 				return;
 			}
+
+			calQHash(q);
 
 			int num_candidates = 0;
 			uint32_t diff = 1;
@@ -573,6 +575,22 @@ namespace lsh
 					if (cnt > ub) break;
 				}
 			}
+
+			q->cost += ub;
+		}
+
+		int getEntryPoint(queryN*& q) {
+			int np = part_map.size() - 1;
+			//int cnt = 0;
+			//int ub = 200;
+
+			//int size = part_map[np].size();
+
+			calQHash(q);
+			auto& table = hash_tables[np * L];
+			auto pos = std::upper_bound(table.begin(), table.end(), srpPair(-1, q->srpval[0])) - table.begin();
+			if (pos - 1 >= 0) return part_map[np][table[pos - 1].id];
+			return part_map[np][table[pos - 1].id];
 
 		}
 	};

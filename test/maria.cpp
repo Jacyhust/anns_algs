@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
     auto& queries = prep.queries;
 
     queries.N = 100;
-    int repeat = 1;
+    int repeat = 100;
     int nq = queries.N * repeat;
 
     std::vector<queryN> qs;
@@ -86,6 +86,9 @@ int main(int argc, char* argv[])
     //res.push_back(searchFunction(mariaV7, qs, prep));
     res.push_back(searchFunction(mariaV8, qs, prep));
     res.push_back(searchFunction(lm, qs, prep));
+    res.push_back(searchFunctionFn(lm, qs, prep, 1));
+    res.push_back(searchFunctionFn(lm, qs, prep, 3));
+    //res.push_back(searchFunctionFn(lm, qs, prep, 2));
     saveAndShow(c, k_, dataset, res);
 
     return 0;
