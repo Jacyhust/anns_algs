@@ -1293,9 +1293,9 @@ class LiteMARIA
 				if (visited[u]) continue;
 				visited[u] = true;
 
-				int* vertex_u = link_lists + size_per_point * u;
-				float dist = estimatedIP(q_hash, (uint64_t*)(vertex_u), (*((float*)(vertex_u + 2))));
-
+				//int* vertex_u = link_lists + size_per_point * u;
+				//float dist = estimatedIP(q_hash, (uint64_t*)(vertex_u), (*((float*)(vertex_u + 2))));
+				float dist = rand();
 
 				//float dist = cal_inner_product(q->queryPoint, data[u], data.dim);
 				//q->cost++;
