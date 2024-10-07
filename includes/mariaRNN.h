@@ -1112,7 +1112,7 @@ class LiteMARIA
 		std::vector<bool>().swap(q->visited);
 	}
 
-	//To be designed 
+	//To be designed
 	void knn2(queryN* q)
 	{
 		lsh::timer timer;
