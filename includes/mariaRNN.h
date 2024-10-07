@@ -502,7 +502,7 @@ public:
 			buildIndex();
 			float memf = (float)getCurrentRSS() / (1024 * 1024);
 			indexing_time = timer.elapsed();
-			std::cout << "Building time:" << indexing_time << "  seconds.\n";
+			std::cout << "MARIA Building time:" << indexing_time << "  seconds.\n";
 			FILE *fp = nullptr;
 			fopen_s(&fp, "./indexes/maria_info.txt", "a");
 			if (fp)
@@ -794,7 +794,7 @@ public:
 		size_per_point += para.S;
 		int init_S = 32;
 		int j = 1;
-		size_per_point += para.S;
+		//size_per_point += para.S;
 		while (i - j >= 0)
 		{
 			size_per_point += init_S;

@@ -81,7 +81,7 @@ namespace lsh
 				buildIndex();
 				float memf = (float)getCurrentRSS() / (1024 * 1024);
 				indexing_time = timer.elapsed();
-				std::cout << "Building time:" << indexing_time << "  seconds.\n";
+				std::cout << "SRP Building time:" << indexing_time << "  seconds.\n";
 				FILE* fp = nullptr;
 				fopen_s(&fp, "./indexes/maria_info.txt", "a");
 				if (fp) fprintf(fp, "%s\nmemory=%f MB, IndexingTime=%f s.\n\n", index_file.c_str(), memf - mem, indexing_time);
