@@ -488,6 +488,9 @@ class queryN
 		queryPoint = query;
 
 		norm = sqrt(cal_inner_product(queryPoint, queryPoint, dim));
+		for (int i = 0;i < dim;++i) {
+			queryPoint[i] /= norm;
+		}
 		//search();
 	}
 	//void search();

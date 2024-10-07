@@ -994,15 +994,18 @@ class LiteMARIA
 		}
 	}
 
+	// Search in SRP to generate better entry point
 	void knn(queryN* q)
 	{
 		lsh::timer timer;
 		std::priority_queue<Res> top_candidates, candidate_set;
+		std::vector<bool>& visited = q->visited;
+		visited.resize(data.N, false);
 		srp->knn(q);
 		while (top_candidates.size() > q->k)
 			top_candidates.pop();
 
-		std::vector<bool>& visited = q->visited;
+
 		int efS = q->k + ef;
 		efS = 180;
 		while (!(q->top_candidates.empty()))
@@ -1054,8 +1057,8 @@ class LiteMARIA
 		std::vector<bool>().swap(q->visited);
 	}
 
-	void knn1(queryN* q)
-	{
+	//Totally random enry point
+	void knn1(queryN* q) {
 		lsh::timer timer;
 		std::priority_queue<Res> top_candidates, candidate_set;
 		std::vector<bool>& visited = q->visited;
@@ -1063,7 +1066,7 @@ class LiteMARIA
 		int efS = q->k + ef;
 		efS = 180;
 
-		int ep = srp->getEntryPoint(q);
+
 		float dist = cal_inner_product(q->queryPoint, data[0], data.dim);
 		visited[0] = true;
 		q->cost++;
@@ -1109,15 +1112,17 @@ class LiteMARIA
 		std::vector<bool>().swap(q->visited);
 	}
 
+	//To be designed 
 	void knn2(queryN* q)
 	{
 		lsh::timer timer;
 		std::priority_queue<Res> top_candidates, candidate_set;
+		std::vector<bool>& visited = q->visited;
+		visited.resize(data.N, false);
 		srp->knn(q);
 		while (top_candidates.size() > q->k)
 			top_candidates.pop();
 
-		std::vector<bool>& visited = q->visited;
 		int efS = q->k + ef;
 		efS = 180;
 		while (!(q->top_candidates.empty()))
@@ -1169,6 +1174,7 @@ class LiteMARIA
 		std::vector<bool>().swap(q->visited);
 	}
 
+	//Choose an entry point in block 1 quickly
 	void knn3(queryN* q)
 	{
 		lsh::timer timer;
@@ -1177,11 +1183,15 @@ class LiteMARIA
 		visited.resize(data.N, false);
 		int efS = q->k + ef;
 		efS = 180;
-		float dist = cal_inner_product(q->queryPoint, data[0], data.dim);
-		visited[0] = true;
+
+		int ep = 0;
+		//ep = srp->getEntryPoint(q);
+
+		float dist = cal_inner_product(q->queryPoint, data[ep], data.dim);
+		visited[ep] = true;
 		q->cost++;
-		candidate_set.emplace(0, dist);
-		top_candidates.emplace(0, -dist);
+		candidate_set.emplace(ep, dist);
+		top_candidates.emplace(ep, -dist);
 
 
 		while (!candidate_set.empty())
