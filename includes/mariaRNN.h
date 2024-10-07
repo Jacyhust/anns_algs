@@ -758,6 +758,7 @@ class mariaV8
 
 	void compute_maxsize() {
 		int i = parti.numChunks - 1;
+		size_per_point += para.S;
 		int init_S = 32;
 		int j = 1;
 		while (i - j >= 0) {
@@ -768,6 +769,7 @@ class mariaV8
 
 		//To align with 64B
 		size_per_point = ((size_per_point - 1) / 16 + 1) * 16;
+		size_per_point *= 10;
 	}
 
 	void saveIndex() {
@@ -780,11 +782,12 @@ class mariaV8
 		for (int i = 0;i < N;++i) {
 			int* v = link_lists + size_per_point * i;
 			//memcpy((void*)(v), (void*)(srp->hashvals[i].data()), sizeof(uint64_t));//v->hashval has the same address with v
-			memcpy(reinterpret_cast<void*>(v), reinterpret_cast<void*>(srp->hashvals[i].data()), sizeof(uint64_t));
-			float* pvnorm = (float*)(v + 2);
-			*pvnorm = sqrt(square_norms[i]);
-			int* pvsize = (int*)(v + 3);
-			*pvsize = 0;
+			//memcpy(reinterpret_cast<void*>(v), reinterpret_cast<void*>(srp->hashvals[i].data()), sizeof(uint64_t));
+			//float* pvnorm = (float*)(v + 2);
+			//*pvnorm = sqrt(square_norms[i]);
+			v[3] = 0;
+			//int* pvsize = (int*)(v + 3);
+			//*pvsize = 0;
 		}
 
 		std::cout << "INITIA  TIME: " << timer.elapsed() << "s." << std::endl;
@@ -799,8 +802,8 @@ class mariaV8
 				int* v = (link_lists + size_per_point * id1);
 				for (auto& u : knng[j]) {
 					int* links = (v + 4);
-					int* size = ((int*)(v + 3));
-					links[(*size)++] = ids[u];
+					//int* size = ((int*)(v + 3));
+					links[(v[3])++] = ids[u];
 				}
 			}
 		}
@@ -818,11 +821,11 @@ class mariaV8
 				//vertex* v = (vertex*)(link_lists + size_per_point * id1);
 				int* v = (link_lists + size_per_point * id1);
 				int* links = (v + 4);
-				int* size = ((int*)(v + 3));
+				//int* size = ((int*)(v + 3));
 				for (auto& u : knng[j]) {
 					//v->links[v->size++] = ids2[u];
 
-					links[(*size)++] = ids1[u];
+					links[(v[3])++] = ids1[u];
 					//auto& size = *((int*)(v + 12));
 					//links[size++] = ids2[u];
 				}
@@ -896,7 +899,7 @@ class LiteMARIA {
 		in.read((char*)(&N), sizeof(int));
 		in.read((char*)(&size_per_point), sizeof(size_t));
 		link_lists = new int[size_per_point * N];
-		in.read((char*)(link_lists), sizeof(char) * size_per_point * N);
+		in.read((char*)(link_lists), sizeof(int) * size_per_point * N);
 	}
 
 
@@ -919,9 +922,9 @@ class LiteMARIA {
 			candidate_set.pop();
 			if (-top.dist > top_candidates.top().dist) break;
 			int* v = (link_lists + size_per_point * top.id);
-			int size = *((int*)(v + 3));
+			//int size = *((int*)(v + 3));
 			int* links = (v + 4);
-			for (int i = 0;i < size;++i) {
+			for (int i = 0; i < v[3]; ++i) {
 				auto& u = links[i];
 				if (visited[u]) continue;
 				visited[u] = true;
