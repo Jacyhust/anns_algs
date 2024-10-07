@@ -49,6 +49,8 @@ int main(int argc, char* argv[])
     //mariaV7 mariaV7(prep.data, parti, L, K);
     mariaV8 mariaV8(prep.data, prep.SquareLen, index_fold + argvStr[2] + "_maria", parti, L, K);
     LiteMARIA lm(prep.data, index_fold + argvStr[2] + "_maria", parti);
+    mariaV8.showInfo();
+    lm.showInfo();
     float c_ = 0.5;
     int k_ = 50;
     int M = 48;

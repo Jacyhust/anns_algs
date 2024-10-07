@@ -513,10 +513,10 @@ namespace lsh
 			}
 		}
 
-		void knn(queryN* q) {
+		void knn(queryN*& q) {
 			int np = part_map.size() - 1;
-			int ub = 200;
 			int cnt = 0;
+			int ub=200;
 			std::vector<bool>& visited = q->visited;
 			visited.resize(data.N, false);
 			int size = part_map[np].size();
