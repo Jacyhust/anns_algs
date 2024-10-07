@@ -531,7 +531,7 @@ class mariaV8
 		lsh::timer timer;
 		float time = 0.0f;
 
-#pragma omp parallel for schedule(dynamic)
+		//#pragma omp parallel for schedule(dynamic)
 		for (int i = parti.numChunks - 1; i >= 0; --i)
 		{
 			if (parti.EachParti[i].size() < 100)
@@ -587,8 +587,7 @@ class mariaV8
 		}
 
 #pragma omp parallel for schedule(dynamic)
-		for (int i = 0; i < bps.size(); ++i)
-		{
+		for (int i = 0; i < bps.size(); ++i) {
 			interConnection(bps[i]);
 		}
 
@@ -821,9 +820,9 @@ class mariaV8
 		for (int i = 0;i < N;++i) {
 			int* v = link_lists + size_per_point * i;
 			//memcpy((void*)(v), (void*)(srp->hashvals[i].data()), sizeof(uint64_t));//v->hashval has the same address with v
-			//memcpy(reinterpret_cast<void*>(v), reinterpret_cast<void*>(srp->hashvals[i].data()), sizeof(uint64_t));
-			//float* pvnorm = (float*)(v + 2);
-			//*pvnorm = sqrt(square_norms[i]);
+			memcpy(reinterpret_cast<void*>(v), reinterpret_cast<void*>(srp->hashvals[i].data()), sizeof(uint64_t));
+			float* pvnorm = (float*)(v + 2);
+			*pvnorm = sqrt(square_norms[i]);
 			v[3] = 0;
 			//int* pvsize = (int*)(v + 3);
 			//*pvsize = 0;
@@ -855,32 +854,32 @@ class mariaV8
 		std::cout << "TANGEN  TIME: " << timer.elapsed() << "s." << std::endl;
 		timer.restart();
 
-		// 		for (auto &bps : conn_blocks)
-		// 		{
-		// 			auto &ids1 = parti.EachParti[bps.block1_id];
-		// 			auto &ids2 = parti.EachParti[bps.block2_id];
-		// 			auto &knng = bps.normal_edges;
-		// #pragma omp parallel for schedule(dynamic, 256)
-		// 			for (int j = 0; j < knng.size(); ++j)
-		// 			{
-		// 				int id1 = ids2[j];
-		// 				// vertex* v = (vertex*)(link_lists + size_per_point * id1);
-		// 				int *v = (link_lists + size_per_point * id1);
-		// 				int *links = (v + 4);
-		// 				int *size = ((int *)(v + 3));
-		// 				for (auto &u : knng[j])
-		// 				{
-		// 					// v->links[v->size++] = ids2[u];
+		for (auto& bps : conn_blocks)
+		{
+			auto& ids1 = parti.EachParti[bps.block1_id];
+			auto& ids2 = parti.EachParti[bps.block2_id];
+			auto& knng = bps.normal_edges;
+#pragma omp parallel for schedule(dynamic, 256)
+			for (int j = 0; j < knng.size(); ++j)
+			{
+				int id1 = ids2[j];
+				// vertex* v = (vertex*)(link_lists + size_per_point * id1);
+				int* v = (link_lists + size_per_point * id1);
+				int* links = (v + 4);
+				int* size = ((int*)(v + 3));
+				for (auto& u : knng[j])
+				{
+					// v->links[v->size++] = ids2[u];
 
-		// 					links[(*size)++] = ids1[u];
-		// 					// auto& size = *((int*)(v + 12));
-		// 					// links[size++] = ids2[u];
-		// 				}
-		// 			}
-		// 		}
+					links[(*size)++] = ids1[u];
+					// auto& size = *((int*)(v + 12));
+					// links[size++] = ids2[u];
+				}
+			}
+		}
 
-		// 		std::cout << "NORMAL TIME: " << timer.elapsed() << "s." << std::endl;
-		// 		timer.restart();
+		std::cout << "NORMAL TIME: " << timer.elapsed() << "s." << std::endl;
+		timer.restart();
 
 		std::string file = index_file;
 		std::ofstream out(file, std::ios::binary);
@@ -997,10 +996,15 @@ class LiteMARIA
 
 	void knn(queryN* q)
 	{
+		lsh::timer timer;
 		std::priority_queue<Res> top_candidates, candidate_set;
 		srp->knn(q);
+		while (top_candidates.size() > q->k)
+			top_candidates.pop();
+
 		std::vector<bool>& visited = q->visited;
 		int efS = q->k + ef;
+		efS = 180;
 		while (!(q->top_candidates.empty()))
 		{
 			auto top = q->top_candidates.top();
@@ -1025,6 +1029,7 @@ class LiteMARIA
 				if (visited[u]) continue;
 				visited[u] = true;
 				float dist = cal_inner_product(q->queryPoint, data[u], data.dim);
+				q->cost++;
 				candidate_set.emplace(u, dist);
 				top_candidates.emplace(u, -dist);
 				if (top_candidates.size() > efS)
@@ -1043,7 +1048,177 @@ class LiteMARIA
 			q->res.emplace_back(top.id, -top.dist);
 			top_candidates.pop();
 		}
-		//std::reverse(q->res.begin(), q->res.end());
-		//std::vector<bool>().swap(q->visited);
+
+		q->time_total = timer.elapsed();
+		std::reverse(q->res.begin(), q->res.end());
+		std::vector<bool>().swap(q->visited);
+	}
+
+	void knn1(queryN* q)
+	{
+		lsh::timer timer;
+		std::priority_queue<Res> top_candidates, candidate_set;
+		std::vector<bool>& visited = q->visited;
+		visited.resize(data.N, false);
+		int efS = q->k + ef;
+		efS = 180;
+
+		int ep = srp->getEntryPoint(q);
+		float dist = cal_inner_product(q->queryPoint, data[0], data.dim);
+		visited[0] = true;
+		q->cost++;
+		candidate_set.emplace(0, dist);
+		top_candidates.emplace(0, -dist);
+
+
+		while (!candidate_set.empty())
+		{
+			auto top = candidate_set.top();
+			candidate_set.pop();
+			if (-top.dist > top_candidates.top().dist) break;
+			int* v = (link_lists + size_per_point * top.id);
+			//int size = *((int*)(v + 3));
+			int* links = (v + 4);
+			for (int i = 0; i < v[3]; ++i) {
+				auto& u = links[i];
+				if (visited[u]) continue;
+				visited[u] = true;
+				float dist = cal_inner_product(q->queryPoint, data[u], data.dim);
+				q->cost++;
+				candidate_set.emplace(u, dist);
+				top_candidates.emplace(u, -dist);
+				if (top_candidates.size() > efS)
+					top_candidates.pop();
+			}
+		}
+
+		while (top_candidates.size() > q->k)
+			top_candidates.pop();
+
+		q->res.clear();
+		q->res.reserve(top_candidates.size());
+		while (!top_candidates.empty())
+		{
+			auto top = top_candidates.top();
+			q->res.emplace_back(top.id, -top.dist);
+			top_candidates.pop();
+		}
+
+		q->time_total = timer.elapsed();
+		std::reverse(q->res.begin(), q->res.end());
+		std::vector<bool>().swap(q->visited);
+	}
+
+	void knn2(queryN* q)
+	{
+		lsh::timer timer;
+		std::priority_queue<Res> top_candidates, candidate_set;
+		srp->knn(q);
+		while (top_candidates.size() > q->k)
+			top_candidates.pop();
+
+		std::vector<bool>& visited = q->visited;
+		int efS = q->k + ef;
+		efS = 180;
+		while (!(q->top_candidates.empty()))
+		{
+			auto top = q->top_candidates.top();
+			candidate_set.emplace(top.id, -top.dist);
+			top_candidates.emplace(top.id, top.dist);
+			q->top_candidates.pop();
+		}
+
+		while (top_candidates.size() > efS)
+			top_candidates.pop();
+
+		while (!candidate_set.empty())
+		{
+			auto top = candidate_set.top();
+			candidate_set.pop();
+			if (-top.dist > top_candidates.top().dist) break;
+			int* v = (link_lists + size_per_point * top.id);
+			//int size = *((int*)(v + 3));
+			int* links = (v + 4);
+			for (int i = 0; i < v[3]; ++i) {
+				auto& u = links[i];
+				if (visited[u]) continue;
+				visited[u] = true;
+				float dist = cal_inner_product(q->queryPoint, data[u], data.dim);
+				q->cost++;
+				candidate_set.emplace(u, dist);
+				top_candidates.emplace(u, -dist);
+				if (top_candidates.size() > efS)
+					top_candidates.pop();
+			}
+		}
+
+		while (top_candidates.size() > q->k)
+			top_candidates.pop();
+
+		q->res.clear();
+		q->res.reserve(top_candidates.size());
+		while (!top_candidates.empty())
+		{
+			auto top = top_candidates.top();
+			q->res.emplace_back(top.id, -top.dist);
+			top_candidates.pop();
+		}
+
+		q->time_total = timer.elapsed();
+		std::reverse(q->res.begin(), q->res.end());
+		std::vector<bool>().swap(q->visited);
+	}
+
+	void knn3(queryN* q)
+	{
+		lsh::timer timer;
+		std::priority_queue<Res> top_candidates, candidate_set;
+		std::vector<bool>& visited = q->visited;
+		visited.resize(data.N, false);
+		int efS = q->k + ef;
+		efS = 180;
+		float dist = cal_inner_product(q->queryPoint, data[0], data.dim);
+		visited[0] = true;
+		q->cost++;
+		candidate_set.emplace(0, dist);
+		top_candidates.emplace(0, -dist);
+
+
+		while (!candidate_set.empty())
+		{
+			auto top = candidate_set.top();
+			candidate_set.pop();
+			if (-top.dist > top_candidates.top().dist) break;
+			int* v = (link_lists + size_per_point * top.id);
+			//int size = *((int*)(v + 3));
+			int* links = (v + 4);
+			for (int i = 0; i < v[3]; ++i) {
+				auto& u = links[i];
+				if (visited[u]) continue;
+				visited[u] = true;
+				float dist = cal_inner_product(q->queryPoint, data[u], data.dim);
+				q->cost++;
+				candidate_set.emplace(u, dist);
+				top_candidates.emplace(u, -dist);
+				if (top_candidates.size() > efS)
+					top_candidates.pop();
+			}
+		}
+
+		while (top_candidates.size() > q->k)
+			top_candidates.pop();
+
+		q->res.clear();
+		q->res.reserve(top_candidates.size());
+		while (!top_candidates.empty())
+		{
+			auto top = top_candidates.top();
+			q->res.emplace_back(top.id, -top.dist);
+			top_candidates.pop();
+		}
+
+		q->time_total = timer.elapsed();
+		std::reverse(q->res.begin(), q->res.end());
+		std::vector<bool>().swap(q->visited);
 	}
 };
