@@ -22,11 +22,11 @@ std::string data_fold2 = data_fold + ("MIPS/");
 
 int main(int argc, char* argv[])
 {
-    //uint64_t arr64[2] = { 63,64 };
-    //std::cout << "1st ele is:" << arr64[0] << std::endl;
-    //std::cout << "1st ele is:" << arr64[1] << std::endl;
-    //std::cout << "diffcnt is:" << bitCounts(arr64, arr64 + 1) << std::endl;
-    //return 0;
+    // uint64_t arr64[2] = { 63,64 };
+    // std::cout << "1st ele is:" << arr64[0] << std::endl;
+    // std::cout << "1st ele is:" << arr64[1] << std::endl;
+    // std::cout << "diffcnt is:" << bitCounts(arr64, arr64 + 1) << std::endl;
+    // return 0;
 
     std::string dataset = "audio";
     if (argc > 1) {

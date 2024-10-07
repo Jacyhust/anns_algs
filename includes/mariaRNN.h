@@ -941,6 +941,7 @@ class mariaV8
 
 class LiteMARIA
 {
+	float cos4bit_cnt[65];
 	public:
 	std::string alg_name = "LiteMaria";
 	int* link_lists = nullptr;
@@ -955,6 +956,7 @@ class LiteMARIA
 	LiteMARIA(Data& data_, const std::string& file, Partition& parti)
 	{
 		data = data_;
+		buildFn();
 		srp = new lsh::srp(data, parti.EachParti, file + "_srp", data.N, data.dim);
 		std::cout << "Loading index from " << file << ":\n";
 		float mem = (float)getCurrentRSS() / (1024 * 1024);
@@ -1233,14 +1235,16 @@ class LiteMARIA
 		std::vector<bool>().swap(q->visited);
 	}
 
-	inline float estimatedIP(uint64_t* k1, uint64_t* k2, float norm) {
+	void buildFn() {
 		const float pi_bar = 3.14159265358979323846 / 64;
-		// std::cout << "1st ele is:" << *k1 << std::endl;
-		// std::cout << "2nd ele is:" << *k2 << std::endl;
-		// std::cout << "norm    is:" << norm << std::endl;
-		// std::cout << "diffcnt is:" << bitCounts(k1, k2) << std::endl;
-		float cos_similarity = cos((float)(bitCounts(k1, k2)) * pi_bar);
-		return norm * cos_similarity;
+		for (int i = 0;i < 65;++i) {
+			cos4bit_cnt[i] = cos((float)(i)*pi_bar);
+		}
+	}
+
+	inline float estimatedIP(uint64_t* k1, uint64_t* k2, float norm) {
+
+		return norm * cos4bit_cnt[bitCounts(k1, k2)];
 	}
 
 	//With norm filtering
@@ -1294,7 +1298,7 @@ class LiteMARIA
 
 
 				//float dist = cal_inner_product(q->queryPoint, data[u], data.dim);
-				q->cost++;
+				//q->cost++;
 				candidate_set.emplace(u, dist);
 				top_candidates.emplace(u, -dist);
 				if (top_candidates.size() > efS)
