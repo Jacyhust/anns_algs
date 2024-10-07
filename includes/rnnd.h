@@ -434,8 +434,7 @@ namespace rnnd
         }
 
         void build(const int n, bool verbose, std::vector<std::vector<Res>>& init_nns) {
-            if (verbose)
-            {
+            if (verbose){
                 printf("Parameters: S=%d, R=%d, T1=%d, T2=%d\n", S, R, T1, T2);
             }
 

@@ -25,7 +25,25 @@ namespace lsh
 		bool operator<(const srpPair& rhs) const { return val < rhs.val; }
 	};
 
+	struct hash_t {
+		void reset(int N_){
+			delete[] base;
+			N = N_;
+			base = new uint16_t[N * 4];
+			memset(base, 0, sizeof(uint16_t) * N * 4);
+		}
 
+		uint16_t* operator[](size_t i) { return base + i * 4; }
+		size_t size() const { return N; }
+
+		~hash_t() {
+			delete[] base;
+		}
+	private:
+		uint16_t* base = nullptr;
+		size_t N = 0;
+		//const int L = 4;
+	};
 
 	// My implement for a simple sign random prejection LSH function class
 	class srp
@@ -33,6 +51,8 @@ namespace lsh
 		// int N=0;
 
 		//N * L;
+
+		
 
 		std::vector<std::vector<srpPair>> hash_tables;
 		std::vector<std::vector<int>>& part_map;
@@ -48,8 +68,11 @@ namespace lsh
 		// Dimension of the hash table
 		int K = 0;
 		float indexing_time = 0.0f;
-		public:
-		std::vector<std::vector<uint16_t>> hashvals;
+	public:
+		//std::vector<std::vector<uint16_t>> hashvals;
+		//std::vector<uint16_t[4]> hashvals;
+
+		hash_t hashvals;
 		size_t getCost()
 		{
 			return cost;
@@ -66,7 +89,7 @@ namespace lsh
 			L = L_;
 			K = K_;
 			S = L * K;
-			hashvals.resize(N_);
+			hashvals.reset(N_);
 			index_file = index_file_;
 			if (L > 4 || K > 16) {
 				std::cerr << "The valid ranges of L and K are: 1<=L<=4, 1<=K<=16" << std::endl;
@@ -174,9 +197,14 @@ namespace lsh
 #pragma omp parallel for schedule(dynamic, 256)
 			for (int i = 0; i < hashvals.size(); ++i)
 			{
-				hashvals[i].resize(L, 0);
+				//hashvals[i].resize(L, 0);
+				hashvals[i][0] = 0;
+				hashvals[i][1] = 0;
+				hashvals[i][2] = 0;
+				hashvals[i][3] = 0;
 				for (int j = 0; j < L; ++j)
 				{
+					
 					for (int l = 0; l < K; ++l)
 					{
 						float val = cal_inner_product(data[i], rndAs + (j * K + l) * dim, dim);
@@ -252,9 +280,10 @@ namespace lsh
 			//save hashvals
 			int N = hashvals.size();
 			out.write((char*)(&N), sizeof(int));
-			for (int i = 0;i < N;++i) {
-				out.write((char*)(hashvals[i].data()), sizeof(uint16_t) * L);
-			}
+			out.write((char*)(hashvals[0]), sizeof(uint16_t) * N * 4);
+			//for (int i = 0;i < N;++i) {
+			//	out.write((char*)&(hashvals[i][0]), sizeof(uint16_t) * L);
+			//}
 
 			//save hash tables
 			int ntb = hash_tables.size();
@@ -283,11 +312,12 @@ namespace lsh
 			//load hashvals
 			int N = 0;
 			in.read((char*)(&N), sizeof(int));
-			hashvals.resize(N);
-			for (int i = 0;i < N;++i) {
-				hashvals[i].resize(L);
-				in.read((char*)(hashvals[i].data()), sizeof(uint16_t) * L);
-			}
+			hashvals.reset(N);
+			in.read((char*)(hashvals[0]), sizeof(uint16_t) * N * 4);
+			//for (int i = 0;i < N;++i) {
+			//	//hashvals[i].resize(L);
+			//	in.read((char*)(hashvals[i]), sizeof(uint16_t) * L);
+			//}
 
 			//load hash tables
 			int ntb = 0;
@@ -498,6 +528,7 @@ namespace lsh
 			}
 		}
 
+
 		void calQHash(queryN* q) {
 			//hashvals[i].resize(L, 0);
 			auto& vals = q->srpval;
@@ -537,7 +568,8 @@ namespace lsh
 			uint16_t lval[4], rval[4];
 			for (int i = 0;i < L;++i) {
 				auto& table = hash_tables[i + np * L];
-				rpos[i] = std::upper_bound(table.begin(), table.end(), srpPair(-1, q->srpval[i])) - table.begin();
+				//rpos[i] = std::upper_bound(table.begin(), table.end(), srpPair(-1, q->srpval[i])) - table.begin();
+				rpos[i] = std::distance(table.begin(), std::upper_bound(table.begin(), table.end(), srpPair(-1, q->srpval[i])));
 				lpos[i] = rpos[i] - 1;
 				while (lpos[i] >= 0 && table[lpos[i]].val >= q->srpval[i]) {
 					lpos[i]--;
@@ -603,7 +635,8 @@ namespace lsh
 			uint16_t lval[4], rval[4];
 			for (int i = 0;i < L;++i) {
 				auto& table = hash_tables[i + np * L];
-				rpos[i] = std::upper_bound(table.begin(), table.end(), srpPair(-1, q->srpval[i])) - table.begin();
+				//rpos[i] = std::upper_bound(table.begin(), table.end(), srpPair(-1, q->srpval[i])) - table.begin();
+				rpos[i] = std::distance(table.begin(), std::upper_bound(table.begin(), table.end(), srpPair(-1, q->srpval[i])));
 				lpos[i] = rpos[i] - 1;
 				while (lpos[i] >= 0 && table[lpos[i]].val >= q->srpval[i]) {
 					lpos[i]--;
@@ -653,9 +686,10 @@ namespace lsh
 
 			calQHash(q);
 			auto& table = hash_tables[np * L];
-			auto pos = std::upper_bound(table.begin(), table.end(), srpPair(-1, q->srpval[0])) - table.begin();
-			if (pos - 1 >= 0) return part_map[np][table[pos - 1].id];
-			return part_map[np][table[pos - 1].id];
+			int pos = std::distance(table.begin(), std::upper_bound(table.begin(), table.end(), srpPair(-1, q->srpval[0])));
+			if (pos> 0) return part_map[np][table[pos - 1].id];
+			//if (pos - 1 >= 0) return part_map[np][table[pos - 1].id];
+			return part_map[np][table[pos].id];
 
 		}
 	};

@@ -496,7 +496,7 @@ class mariaV8
 		// para.T2 = 1;
 
 		lsh::timer timer;
-		if (1 || !exists_test(index_file))
+		if (0 || !exists_test(index_file))
 		{
 			float mem = (float)getCurrentRSS() / (1024 * 1024);
 			buildIndex();
@@ -820,7 +820,7 @@ class mariaV8
 		for (int i = 0;i < N;++i) {
 			int* v = link_lists + size_per_point * i;
 			//memcpy((void*)(v), (void*)(srp->hashvals[i].data()), sizeof(uint64_t));//v->hashval has the same address with v
-			memcpy(reinterpret_cast<void*>(v), reinterpret_cast<void*>(srp->hashvals[i].data()), sizeof(uint64_t));
+			memcpy(reinterpret_cast<void*>(v), reinterpret_cast<void*>(srp->hashvals[i]), sizeof(uint64_t));
 			float* pvnorm = (float*)(v + 2);
 			*pvnorm = sqrt(square_norms[i]);
 			v[3] = 0;
@@ -1011,7 +1011,7 @@ class LiteMARIA
 		while (!(q->top_candidates.empty()))
 		{
 			auto top = q->top_candidates.top();
-			candidate_set.emplace(top.id, -top.dist);
+			//candidate_set.emplace(top.id, -top.dist);
 			top_candidates.emplace(top.id, top.dist);
 			q->top_candidates.pop();
 		}
@@ -1128,13 +1128,14 @@ class LiteMARIA
 		while (!(q->top_candidates.empty()))
 		{
 			auto top = q->top_candidates.top();
-			candidate_set.emplace(top.id, -top.dist);
+			//candidate_set.emplace(top.id, -top.dist);
 			top_candidates.emplace(top.id, top.dist);
 			q->top_candidates.pop();
 		}
 
 		while (top_candidates.size() > efS)
 			top_candidates.pop();
+
 
 		while (!candidate_set.empty())
 		{
@@ -1225,6 +1226,95 @@ class LiteMARIA
 			auto top = top_candidates.top();
 			q->res.emplace_back(top.id, -top.dist);
 			top_candidates.pop();
+		}
+
+		q->time_total = timer.elapsed();
+		std::reverse(q->res.begin(), q->res.end());
+		std::vector<bool>().swap(q->visited);
+	}
+
+	inline float estimatedIP(uint64_t* k1, uint64_t* k2, float norm) {
+		const float pi_bar = 3.14159265358979323846 / 64;
+		std::cout << "1st ele is:" << *k1 << std::endl;
+		std::cout << "2nd ele is:" << *k2 << std::endl;
+		std::cout << "norm    is:" << norm << std::endl;
+		std::cout << "diffcnt is:" << bitCounts(k1, k2) << std::endl;
+		float cos_similarity = cos((float)(bitCounts(k1, k2)) * pi_bar);
+		return norm * cos_similarity;
+	}
+
+	//With norm filtering
+	void knn4(queryN* q)
+	{
+		lsh::timer timer;
+		std::priority_queue<Res> top_candidates, candidate_set;
+		std::vector<bool>& visited = q->visited;
+		visited.resize(data.N, false);
+		srp->knn(q);
+		uint64_t* q_hash = (uint64_t*)(q->srpval);
+		/*while (top_candidates.size() > q->k)
+			top_candidates.pop();*/
+
+
+		int efS = q->k + ef;
+		efS = 180;
+		std::priority_queue<Res> real_top;
+		while (!(q->top_candidates.empty()))
+		{
+			auto top = q->top_candidates.top();
+			real_top.emplace(top);
+			int* vertex_u = link_lists + size_per_point * top.id;
+			float est_dist = estimatedIP(q_hash, (uint64_t*)(vertex_u), (*((float*)(vertex_u + 2))));
+			candidate_set.emplace(top.id, est_dist);
+			top_candidates.emplace(top.id, -est_dist);
+			
+			q->top_candidates.pop();
+		}
+		real_top.swap(q->top_candidates);
+
+		while (q->top_candidates.size() > q->k) q->top_candidates.pop();
+
+		efS = 5000;
+		while (top_candidates.size() > efS) top_candidates.pop();
+		while (!candidate_set.empty()){
+			auto top = candidate_set.top();
+			candidate_set.pop();
+			if (-top.dist > top_candidates.top().dist) break;
+			int* v = (link_lists + size_per_point * top.id);
+			//int size = *((int*)(v + 3));
+			int* links = (v + 4);
+			for (int i = 0; i < v[3]; ++i) {
+				auto& u = links[i];
+				if (visited[u]) continue;
+				visited[u] = true;
+
+				int* vertex_u = link_lists + size_per_point * u;
+				float dist = estimatedIP(q_hash, (uint64_t*)(vertex_u), (*((float*)(vertex_u + 2))));
+
+
+				//float dist = cal_inner_product(q->queryPoint, data[u], data.dim);
+				q->cost++;
+				candidate_set.emplace(u, dist);
+				top_candidates.emplace(u, -dist);
+				if (top_candidates.size() > efS)
+					top_candidates.pop();
+			}
+		}
+
+		while (!top_candidates.empty()){
+			auto top = top_candidates.top();
+			float dist = cal_inner_product(q->queryPoint, data[top.id], data.dim);
+			q->top_candidates.emplace(top.id, -top.dist);
+			if (q->top_candidates.size() > q->k) q->top_candidates.pop();
+			top_candidates.pop();
+		}
+
+		q->res.clear();
+		q->res.reserve(q->top_candidates.size());
+		while (!q->top_candidates.empty()){
+			auto top = q->top_candidates.top();
+			q->res.emplace_back(top.id, -top.dist);
+			q->top_candidates.pop();
 		}
 
 		q->time_total = timer.elapsed();

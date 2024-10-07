@@ -598,3 +598,35 @@ inline bool exists_test(const std::string& name) {
 	std::ifstream f(name.c_str());
 	return f.good();
 }
+
+#if defined _MSC_VER
+#include <intrin.h>
+#endif
+
+		//For two uint64_t numbers k1 and k2, compute the number of their differences in terms of bits
+		inline int bitCounts(uint64_t k1, uint64_t k2)
+		{
+#if defined(__GNUC__)
+			return __builtin_popcount(k1 ^ k2);
+#elif defined _MSC_VER
+			return (int)__popcnt(k1 ^ k2);
+#else
+			std::cout << BOLDRED << "WARNING:" << RED << "bitCounts Undefined in this compipler.\nYou can find the related functions in your system. \n" << RESET;
+			exit(-1);
+#endif
+
+		}
+
+		//For two uint64_t numbers k1 and k2, compute the number of their differences in terms of bits
+		inline int bitCounts(uint64_t* k1, uint64_t* k2)
+		{
+#if defined(__GNUC__)
+			return __builtin_popcount((*k1) ^ (*k2));
+#elif defined _MSC_VER
+			return (int)__popcnt((*k1) ^ (*k2));
+#else
+			std::cout << BOLDRED << "WARNING:" << RED << "bitCounts Undefined in this compipler.\nYou can find the related functions in your system. \n" << RESET;
+			exit(-1);
+#endif
+
+		}

@@ -22,7 +22,13 @@ std::string data_fold2 = data_fold + ("MIPS/");
 
 int main(int argc, char* argv[])
 {
-    std::string dataset = "audio2";
+    //uint64_t arr64[2] = { 63,64 };
+    //std::cout << "1st ele is:" << arr64[0] << std::endl;
+    //std::cout << "1st ele is:" << arr64[1] << std::endl;
+    //std::cout << "diffcnt is:" << bitCounts(arr64, arr64 + 1) << std::endl;
+    //return 0;
+
+    std::string dataset = "deep1m";
     if (argc > 1) {
         dataset = argv[1];
     }
@@ -46,8 +52,8 @@ int main(int argc, char* argv[])
     Preprocess prep(data_fold1 + (argvStr[1]), data_fold2 + (argvStr[3]));
     Partition parti(c, prep);
     //mariaV6 mariaV6(prep.data, parti, L, K);
-    mariaV7 mariaV7(prep.data, parti, L, K);
-    mariaV8 mariaV8(prep.data, prep.SquareLen, index_fold + argvStr[2] + "_maria", parti, L, K);
+    //mariaV7 mariaV7(prep.data, parti, L, K);
+    //mariaV8 mariaV8(prep.data, prep.SquareLen, index_fold + argvStr[2] + "_maria", parti, L, K);
     LiteMARIA lm(prep.data, index_fold + argvStr[2] + "_maria", parti);
     //mariaV8.showInfo();
     //lm.showInfo();
@@ -65,6 +71,9 @@ int main(int argc, char* argv[])
 
     queries.N = 100;
     int repeat = 100;
+#if defined(_DEBUG) || defined(_MSC_VER)
+    repeat = 1;
+#endif // _DEBUG
     int nq = queries.N * repeat;
 
     std::vector<queryN> qs;
@@ -84,11 +93,12 @@ int main(int argc, char* argv[])
 
     //res.push_back(searchFunction(mariaV6, qs, prep));
     //res.push_back(searchFunction(mariaV7, qs, prep));
-    res.push_back(searchFunction(mariaV8, qs, prep));
+    //res.push_back(searchFunction(mariaV8, qs, prep));
     res.push_back(searchFunction(lm, qs, prep));
     res.push_back(searchFunctionFn(lm, qs, prep, 1));
     res.push_back(searchFunctionFn(lm, qs, prep, 2));
     res.push_back(searchFunctionFn(lm, qs, prep, 3));
+    res.push_back(searchFunctionFn(lm, qs, prep, 4));
     //res.push_back(searchFunctionFn(lm, qs, prep, 2));
     saveAndShow(c, k_, dataset, res);
 
