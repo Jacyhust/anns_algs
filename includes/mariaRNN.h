@@ -531,7 +531,7 @@ public:
 		lsh::timer timer;
 		float time = 0.0f;
 
-#pragma omp parallel for schedule(dynamic)
+//#pragma omp parallel for schedule(dynamic)
 		for (int i = parti.numChunks - 1; i >= 0; --i)
 		{
 			if (parti.EachParti[i].size() < 100)
