@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
     //std::cout << "diffcnt is:" << bitCounts(arr64, arr64 + 1) << std::endl;
     //return 0;
 
-    std::string dataset = "deep1m";
+    std::string dataset = "audio";
     if (argc > 1) {
         dataset = argv[1];
     }
