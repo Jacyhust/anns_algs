@@ -563,7 +563,7 @@ class mariaV8
 			cost += index.cost;
 		}
 
-		std::cout << "NN Descent    TIME: " << timer.elapsed() << "s." << std::endl
+		std::cout << "NN Descent TIME: " << timer.elapsed() << "s." << std::endl
 			<< std::endl;
 		timer.restart();
 
