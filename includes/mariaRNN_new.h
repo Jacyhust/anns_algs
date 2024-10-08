@@ -5,7 +5,7 @@
 #include "srp.h"
 #include "RNNDescent.h"
 #include "rnnd.h"
-
+#include <unordered_set>
 //// My class for store the information of a vertex
 //// Do not directly define a vectex object
 //// It is only for quickly computing the address shifting and increasing the readability
@@ -443,7 +443,8 @@ class mariaV8
 	private:
 	std::string index_file;
 	Partition& parti;
-	std::vector<std::vector<std::vector<uint32_t>>> knngs; // edges in each block
+	//std::vector<std::vector<std::vector<uint32_t>>> knngs; // edges in each block
+	std::vector<std::vector<uint32_t>> tangential_lists;
 	lsh::srp* srp = nullptr;
 	rnnd::rnn_para para;
 	int* link_lists = nullptr;
@@ -527,44 +528,43 @@ class mariaV8
 		// lsh::srp srp(data, parti.EachParti, data.N, data.dim, L, K);
 		srp = new lsh::srp(data, parti.EachParti, index_file + "_srp", data.N, data.dim, L, K, 1);
 		// return;
-		knngs.resize(parti.numChunks);
+		//knngs.resize(parti.numChunks);
 		lsh::timer timer;
 		float time = 0.0f;
-
+		std::vector<std::vector<Res>> knng(N);
 		lsh::progress_display pd(N);
 		//#pragma omp parallel for schedule(dynamic)
-		for (int i = parti.numChunks - 1; i >= 0; --i)
-		{
-			if (parti.EachParti[i].size() < 100)
-			{
-				bfConstruction(i);
+		for (int i = parti.numChunks - 1; i >= 0; --i) {
+			// if (parti.EachParti[i].size() < 100) {
+			// 	pd += parti.EachParti[i].size();
+			// 	continue;
+			// }
+			if (parti.EachParti[i].size() < 256) {
+				bfConstruction(i, knng);
+				pd += parti.EachParti[i].size();
 				continue;
 			}
-			// continue;
-			Data data_in_block;
 			std::vector<std::vector<Res>> knns;
-			data_in_block.N = parti.EachParti[i].size();
-			data_in_block.dim = data.dim;
-			data_in_block.val = new float* [data_in_block.N];
-
-			for (int j = 0; j < parti.EachParti[i].size(); ++j)
-			{
-				auto& id = parti.EachParti[i][j];
-				data_in_block.val[j] = data[id];
+			srp->kjoin1_new(knns, parti.EachParti[i], i, para.S, width);
+			for (int j = 0;j < knns.size();++j) {
+				knng[parti.EachParti[i][j]].swap(knns[j]);
 			}
-			// timer.restart();
-			srp->kjoin1(knns, parti.EachParti[i], i, para.S, width);
-			// time += timer.elapsed();
-			//printf("Parameters for NND: S=%d, R=%d, T1=%d, T2=%d\n", para.S, para.R, para.T1, para.T2);
-			rnnd::RNNDescent index(data_in_block, para);
-			//index.build(data_in_block.N, 0);
-			index.build(data_in_block.N, 0, knns);
-			index.extract_index_graph(knngs[i]);
-
-			cost += index.cost;
-			pd += data_in_block.N;
+			pd += knns.size();
 		}
 
+		std::cout << "SRP Init TIME: " << timer.elapsed() << "s." << std::endl
+			<< std::endl;
+
+		rnnd::RNNDescent index(data, para);
+		index.build(data.N, 0, knng);
+		index.extract_index_graph(tangential_lists);
+
+		// for (int i = parti.numChunks - 1; i >= 0; --i) {
+		// 	if (parti.EachParti[i].size() < 256) {
+		// 		bfConstruction(i, knng);
+		// 		continue;
+		// 	}
+		// }
 		std::cout << "NN Descent TIME: " << timer.elapsed() << "s." << std::endl
 			<< std::endl;
 		timer.restart();
@@ -605,98 +605,41 @@ class mariaV8
 		// std::cout << "SRP SEARCH COST (s): " << time << std::endl;
 	}
 
-	void bfConstruction(int i)
+	void bfConstruction(int i, std::vector<std::vector<Res>>& knng)
 	{
 		int n = parti.EachParti[i].size();
 		if (n <= 1) return;
-		std::vector<std::vector<Res>> nnset(n, std::vector<Res>(n, Res(-1, FLT_MAX)));
+
+		int len = sqrt(n);
+		//std::vector<std::vector<Res>> nnset(n, std::vector<Res>(n, Res(-1, FLT_MAX)));
 #pragma omp parallel for schedule(dynamic)
-		for (int j = 0; j < n; ++j)
-		{
-			for (int l = 0; l < j; ++l)
-			{
+		for (int j = 0; j < n; ++j) {
+			for (int l = std::max(0, j - len); l < j; ++l) {
 				float dist = calInnerProductReverse(data[parti.EachParti[i][j]], data[parti.EachParti[i][l]], data.dim);
-				nnset[j][l] = Res(l, dist);
-				nnset[l][j] = Res(j, dist);
+				//nnset[j][l] = Res(l, dist);
+				//nnset[l][j] = Res(j, dist);
+				knng[parti.EachParti[i][j]].emplace_back(parti.EachParti[i][l], dist);
+				knng[parti.EachParti[i][l]].emplace_back(parti.EachParti[i][j], dist);
 			}
 		}
 
 		// #pragma omp parallel for schedule(dynamic)
-		for (int j = 0; j < n; ++j)
-		{
-			std::sort(nnset[j].begin(), nnset[j].end());
+		for (int j = 0; j < n; ++j) {
+			std::sort(knng[parti.EachParti[i][j]].begin(), knng[parti.EachParti[i][j]].end());
+			knng[parti.EachParti[i][j]].resize(para.S);
 		}
-		auto& apg = knngs[i];
-		int size = para.S;
-		if (size > n)
-			size = n - 1;
-		apg.resize(n, std::vector<uint32_t>(size));
-		for (int j = 0; j < n; ++j)
-		{
-			for (int l = 0; l < size; ++l)
-			{
-				apg[j][l] = nnset[j][l].id;
-			}
-		}
-	}
-
-	// np1<np2
-	void interConnection(block_pairs& bp)
-	{
-		std::vector<std::vector<Res>> knns;
-		srp->kjoin(knns, parti.EachParti[bp.block1_id], bp.block1_id,
-			parti.EachParti[bp.block2_id], bp.block2_id, para.S, width);
-
-		auto& knng1 = knngs[bp.block1_id];
-		bp.normal_edges.resize(parti.EachParti[bp.block2_id].size());
-		// std::vector<int> visited(knng2.size(), -1);
-#pragma omp parallel for schedule(dynamic)
-		for (int i = 0; i < knns.size(); ++i)
-		{
-			float* q = data[parti.EachParti[bp.block2_id][i]];
-			std::priority_queue<Res> top_candidates, candidate_set;
-			std::vector<bool> visited(knng1.size(), false);
-			for (auto& res : knns[i])
-			{
-				top_candidates.push(res);
-				res.dist *= -1.0f;
-				candidate_set.push(res);
-				visited[res.id] = true;
-			}
-
-			while (top_candidates.size() > bp.efC)
-				top_candidates.pop();
-
-			while (!candidate_set.empty())
-			{
-				auto top = candidate_set.top();
-				candidate_set.pop();
-				if (-top.dist > top_candidates.top().dist)
-					break;
-				for (auto& u : knng1[top.id])
-				{
-					if (visited[u])
-						continue;
-					visited[u] = true;
-					float dist = cal_inner_product(q, data[parti.EachParti[bp.block1_id][u]], dim);
-					candidate_set.emplace(u, dist);
-					top_candidates.emplace(u, -dist);
-					if (top_candidates.size() > bp.efC)
-						top_candidates.pop();
-				}
-			}
-
-			while (top_candidates.size() > bp.S)
-				top_candidates.pop();
-
-			bp.normal_edges[i].reserve(top_candidates.size());
-			for (int j = 0; j < top_candidates.size(); ++j)
-			{
-				auto& top = top_candidates.top();
-				bp.normal_edges[i].push_back(top.id);
-				top_candidates.pop();
-			}
-		}
+		// auto& apg = knngs[i];
+		// int size = para.S;
+		// if (size > n)
+		// 	size = n - 1;
+		// apg.resize(n, std::vector<uint32_t>(size));
+		// for (int j = 0; j < n; ++j)
+		// {
+		// 	for (int l = 0; l < size; ++l)
+		// 	{
+		// 		apg[j][l] = nnset[j][l].id;
+		// 	}
+		// }
 	}
 
 	// np1<np2
@@ -706,7 +649,7 @@ class mariaV8
 		srp->kjoin(knns, parti.EachParti[bp.block1_id], bp.block1_id,
 			parti.EachParti[bp.block2_id], bp.block2_id, bp.S, bp.S);
 
-		auto& knng1 = knngs[bp.block1_id];
+		//auto& knng1 = knngs[bp.block1_id];
 		bp.normal_edges.resize(parti.EachParti[bp.block2_id].size());
 		// std::vector<int> visited(knng2.size(), -1);
 #pragma omp parallel for schedule(dynamic)
@@ -714,17 +657,20 @@ class mariaV8
 		{
 			float* q = data[parti.EachParti[bp.block2_id][i]];
 			std::priority_queue<Res> top_candidates, candidate_set;
-			std::vector<bool> visited(knng1.size(), false);
+			//std::vector<bool> visited(knng1.size(), false);
+			std::unordered_set<int> visited_sets;
 			//knns[i].resize()
 			for (auto& res : knns[i]) {
-				if (visited[res.id]) continue;
-				visited[res.id] = true;
+				//if (visited[res.id]) continue;
+				if (visited_sets.find(res.id) != visited_sets.end()) continue;
+				visited_sets.emplace(res.id);
+				//visited[res.id] = true;
 				top_candidates.push(res);
 				//res.dist *= -1.0f;
 				//candidate_set.push(res);
-				for (auto& u : knng1[res.id]) {
-					if (visited[u]) continue;
-					visited[u] = true;
+				for (auto& u : tangential_lists[res.id]) {
+					if (visited_sets.find(res.id) != visited_sets.end()) continue;
+					visited_sets.emplace(res.id);
 					float dist = cal_inner_product(q, data[parti.EachParti[bp.block1_id][u]], dim);
 					//candidate_set.emplace(u, dist);
 					top_candidates.emplace(u, -dist);
@@ -782,11 +728,52 @@ class mariaV8
 		q->cost += cost;
 	}
 
+	void searchInKnng_new(std::vector<std::vector<uint32_t>>& apg, queryN* q, int start, int ef)
+	{
+		auto& nngraph = apg;
+		int cost = 0;
+		std::priority_queue<Res> accessed_candidates;
+		auto& top_candidates = q->top_candidates;
+		int n = nngraph.size();
+		//std::vector<bool> visited(n, false);
+		auto& visited = q->visited;
+		visited[start] = true;
+		float dist = calInnerProductReverse(q->queryPoint, data[start], data.dim);
+		cost++;
+		accessed_candidates.emplace(start, -dist);
+		top_candidates.emplace(start, dist);
+
+		while (!accessed_candidates.empty())
+		{
+			Res top = accessed_candidates.top();
+			if (-top.dist > top_candidates.top().dist)
+				break;
+			accessed_candidates.pop();
+
+			for (auto& u : nngraph[top.id])
+			{
+				if (visited[u])
+					continue;
+				visited[u] = true;
+				dist = calInnerProductReverse(q->queryPoint, data[u], data.dim);
+				cost++;
+				accessed_candidates.emplace(u, -dist);
+				top_candidates.emplace(u, dist);
+				if (top_candidates.size() > ef)
+					top_candidates.pop();
+			}
+		}
+
+		while (top_candidates.size() > q->k)
+			top_candidates.pop();
+		q->cost += cost;
+	}
+
 	void knn(queryN* q)
 	{
 		lsh::timer timer;
 		timer.restart();
-
+		q->visited.resize(data.N, false);
 		int ef = 180;
 		for (int i = parti.numChunks - 1; i >= 0; --i)
 		{
@@ -813,9 +800,9 @@ class mariaV8
 			}
 
 			// continue;
-			auto& knng = knngs[i];
+			auto& knng = tangential_lists;
 
-			searchInKnng(knng, parti.EachParti[i], q, 0, ef);
+			searchInKnng_new(knng, q, parti.EachParti[i][0], ef);
 
 			// break;
 		}
@@ -879,26 +866,14 @@ class mariaV8
 		std::cout << "INITIA  TIME: " << timer.elapsed() << "s." << std::endl;
 		timer.restart();
 
-		for (int i = 0; i < parti.numChunks; ++i)
-		{
-			auto& knng = knngs[i];
-			auto& ids = parti.EachParti[i];
-			//#pragma omp parallel for schedule(dynamic, 256)
-			for (int j = 0; j < knng.size(); ++j)
-			{
-				int id1 = ids[j];
-				int* v = (link_lists + size_per_point * id1);
-				int* links = (v + 4);
-				for (auto& u : knng[j])
-				{
-
-					//int *size = ((int *)(v + 3));
-					links[(v[3])] = ids[u];
-					v[3] = v[3] + 1;
-				}
+		for (int i = 0;i < data.N;++i) {
+			int* v = (link_lists + size_per_point * i);
+			int* links = (v + 4);
+			for (int j = 0; j < tangential_lists[i].size(); ++j) {
+				links[(v[3])] = tangential_lists[i][j];
+				v[3] = v[3] + 1;
 			}
 		}
-
 		std::cout << "TANGEN  TIME: " << timer.elapsed() << "s." << std::endl;
 		timer.restart();
 
@@ -957,25 +932,25 @@ class mariaV8
 
 	void showInfo()
 	{
-		std::cout << "This is the info of V8:" << std::endl;
-		auto knng = knngs[0];
-		auto ids = parti.EachParti[0];
-		for (int i = 0; i < 10; ++i)
-		{
-			int j = 0;
-			for (j = 0; i < N; ++j)
-			{
-				if (ids[j] == i)
-					break;
-			}
+		// std::cout << "This is the info of V8:" << std::endl;
+		// auto knng = knngs[0];
+		// auto ids = parti.EachParti[0];
+		// for (int i = 0; i < 10; ++i)
+		// {
+		// 	int j = 0;
+		// 	for (j = 0; i < N; ++j)
+		// 	{
+		// 		if (ids[j] == i)
+		// 			break;
+		// 	}
 
-			printf("point-%d has %d neighbors:\n", i, knng[j].size());
+		// 	printf("point-%d has %d neighbors:\n", i, knng[j].size());
 
-			for (auto& x : knng[j]) {
-				printf("%d\t", ids[x]);
-			}
-			printf("\n");
-		}
+		// 	for (auto& x : knng[j]) {
+		// 		printf("%d\t", ids[x]);
+		// 	}
+		// 	printf("\n");
+		// }
 	}
 
 	~mariaV8()

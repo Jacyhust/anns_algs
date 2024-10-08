@@ -6,7 +6,7 @@
 //#include "../includes/RNNDescent.h"
 //#include "../includes/utils/io.hpp"
 #include "../includes/utils/StructType.h"
-#include "../includes/mariaRNN.h"
+#include "../includes/mariaRNN_new.h"
 #include "../includes/utils/performance.h"
 
 #if defined(unix) || defined(__unix__)
@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
         dataset = argv[1];
     }
     std::string argvStr[4];
-    argvStr[1] = (dataset + ".data");
+    argvStr[1] = (dataset);
     argvStr[2] = (dataset + ".index");
     argvStr[3] = (dataset + ".bench_graph");
 

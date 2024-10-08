@@ -68,7 +68,11 @@ class Preprocess
 		lsh::timer timer;
 		std::cout << "LOADING DATA..." << std::endl;
 		timer.restart();
-		load_data(path);
+		if (path.find("deep1B") != std::string::npos || path.find("yandex") != std::string::npos) {
+			load_fbin(path + ".fbin", data);
+			load_fbin(path + "_query.fbin", queries);
+		}
+		else load_data(path);
 		std::cout << "LOADING TIME: " << timer.elapsed() << "s." << std::endl << std::endl;
 		cal_SquareLen();
 
@@ -78,12 +82,14 @@ class Preprocess
 	}
 
 	void load_data(const std::string& path) {
-		std::string file = path + "_new";
+		std::string file = path + ".data_new";
 		std::ifstream in(file.c_str(), std::ios::binary);
 		if (!in) {
 			printf("Fail to open the file!\n");
 			exit(-1);
 		}
+
+
 
 		unsigned int header[3] = {};
 		assert(sizeof header == 3 * 4);
@@ -94,14 +100,20 @@ class Preprocess
 
 		queries.N = 200;
 		queries.dim = data.dim;
+
+		std::cout << "Load from new file: " << file << "\n";
+		std::cout << "Nq =  " << queries.N << "\n";
+		std::cout << "N  =  " << data.N << "\n";
+		std::cout << "dim=  " << data.dim << "\n\n";
+
 		queries.val = new float* [queries.N];
 		data.val = new float* [data.N];
 
 		//data.offset=data.dim+1;
-		data.base = new float[data.N * data.dim];
-		queries.base = new float[queries.N * queries.dim];
+		data.base = new float[(size_t)data.N * data.dim];
+		queries.base = new float[(size_t)queries.N * queries.dim];
 
-		for (int i = 0; i < queries.N; ++i) {
+		for (size_t i = 0; i < queries.N; ++i) {
 			// queries.val[i] = new float[queries.dim + 1];
 			// in.read((char*)queries.val[i], sizeof(float) * header[2]);
 			// queries.val[i][queries.dim - 1] = 0.0f;
@@ -110,7 +122,7 @@ class Preprocess
 			in.read((char*)queries.val[i], sizeof(float) * header[2]);
 		}
 
-		for (int i = 0; i < data.N; ++i) {
+		for (size_t i = 0; i < data.N; ++i) {
 			// data.val[i] = new float[data.dim + 1];
 			// in.read((char*)data.val[i], sizeof(float) * header[2]);
 			// data.val[i][data.dim - 1] = 0.0f;
@@ -119,11 +131,42 @@ class Preprocess
 			in.read((char*)data.val[i], sizeof(float) * header[2]);
 		}
 
-		std::cout << "Load from new file: " << file << "\n";
-		std::cout << "Nq =  " << queries.N << "\n";
-		std::cout << "N  =  " << data.N << "\n";
-		std::cout << "dim=  " << data.dim << "\n\n";
+		std::cout << "Finish loading! " << "\n";
 
+		in.close();
+	}
+
+	void load_fbin(const std::string& path, Data& data) {
+		std::string file = path;
+		std::ifstream in(file.c_str(), std::ios::binary);
+		if (!in) {
+			printf("Fail to open the file: %s\n", file.c_str());
+			exit(-1);
+		}
+
+		unsigned int header[2] = {};
+		assert(sizeof header == 2 * 4);
+		in.read((char*)header, sizeof(header));
+		assert(header[0] != 0);
+		data.N = header[0];
+		data.dim = header[1];
+
+		size_t size = ((size_t)header[1]) * header[0];
+		std::cout << "Load from fbin: " << file << "\n";
+		std::cout << "N   =  " << data.N << "\n";
+		std::cout << "dim =  " << data.dim << "\n";
+		std::cout << "size=  " << size << "\n\n";
+
+		data.base = new float[size];
+		data.val = new float* [data.N];
+
+		in.read((char*)data.base, sizeof(float) * size);
+
+		for (size_t i = 0; i < data.N; ++i) {
+			data.val[i] = data.base + i * data.dim;
+		}
+
+		std::cout << "Finish Reading File! " << "\n";
 		in.close();
 	}
 

@@ -16,6 +16,8 @@
 #include "srp.h"
 #include "utils/StructType.h"
 
+#define MAXN (1<<30)
+
 namespace rnnd
 {
 
@@ -83,15 +85,46 @@ namespace rnnd
         }
     }
 
+    //Revised by Xi: Oct 8, 2024
+    //Use id to store id and flag
+    //If id<MAXN: id=id,flag=true
+    //Otherwise:id=id % MAXN,flag=false
     struct Neighbor
     {
+        private:
         int id;
-        float distance;
-        bool flag;
 
+        //bool flag;
+
+        public:
+        float distance;
         Neighbor() = default;
-        Neighbor(int id, float distance, bool f)
-            : id(id), distance(distance), flag(f) {}
+        // Neighbor(int id, float distance, bool f)
+        //     : id(id), distance(distance), flag(f) {}
+
+        Neighbor(int id, float distance)
+            : id(id), distance(distance) {}
+
+        Neighbor(int id, float distance, int f)
+            : id(id | ((1 - f) * MAXN)), distance(distance) {}
+
+        int getId() {
+            return id % MAXN;
+        }
+
+        bool getFlag() {
+            return id < MAXN;
+        }
+
+        void setFalse() {
+            //id = id + MAXN * (1 - f);
+            id |= MAXN;
+        }
+
+        void setTrue() {
+            //id = id + MAXN * (1 - f);
+            id &= (MAXN - 1);
+        }
 
         inline bool operator<(const Neighbor& other) const
         {
@@ -149,18 +182,18 @@ namespace rnnd
                 return;
             for (int i = 0; i < pool.size(); i++)
             {
-                if (id == pool[i].id)
+                if (id == pool[i].getId())
                     return;
             }
             if (pool.size() < pool.capacity())
             {
-                pool.push_back(Neighbor(id, dist, true));
+                pool.push_back(Neighbor(id, dist));
                 std::push_heap(pool.begin(), pool.end());
             }
             else
             {
                 std::pop_heap(pool.begin(), pool.end());
-                pool[pool.size() - 1] = Neighbor(id, dist, true);
+                pool[pool.size() - 1] = Neighbor(id, dist);
                 std::push_heap(pool.begin(), pool.end());
             }
         }
@@ -287,6 +320,7 @@ namespace rnnd
                         std::make_heap(graph[i].pool.begin(), graph[i].pool.end());
                         graph[i].pool.reserve(L);
                     }
+                    std::vector<Res>().swap(init_nns[i]);
                 }
                 //for (int i = 0; i < ntotal; i++)
                 //{
@@ -332,7 +366,7 @@ namespace rnnd
                     [](Neighbor& a,
                         Neighbor& b)
                     {
-                        return a.id == b.id;
+                        return a.getId() == b.getId();
                     }),
                     old_pool.end());
 
@@ -341,25 +375,28 @@ namespace rnnd
                     bool ok = true;
                     for (auto&& other_nn : new_pool)
                     {
-                        if (!nn.flag && !other_nn.flag)
-                        {
+                        // if (!nn.flag && !other_nn.flag)
+                        // {
+                        //     continue;
+                        // }
+                        if (!nn.getFlag() && !other_nn.getFlag()) {
                             continue;
                         }
-                        if (nn.id == other_nn.id)
+                        if (nn.getId() == other_nn.getId())
                         {
                             ok = false;
                             break;
                         }
                         //float distance = matrixOracle(nn.id, other_nn.id);
 
-                        float distance = dist_t(data[nn.id], data[other_nn.id], data.dim);
+                        float distance = dist_t(data[nn.getId()], data[other_nn.getId()], data.dim);
 #if defined(COUNT_CC)
                         cost++;
 #endif
                         if (distance < nn.distance)
                         {
                             ok = false;
-                            insert_nn(other_nn.id, nn.id, distance, true);
+                            insert_nn(other_nn.getId(), nn.getId(), distance, true);
                             break;
                         }
                     }
@@ -371,7 +408,8 @@ namespace rnnd
 
                 for (auto&& nn : new_pool)
                 {
-                    nn.flag = false;
+                    //nn.getFlag() = false;
+                    nn.setFalse();
                 }
                 {
                     std::lock_guard<std::mutex> guard(nhood.lock);
@@ -425,7 +463,7 @@ namespace rnnd
                     [](Neighbor& a,
                         Neighbor& b)
                     {
-                        return a.id == b.id;
+                        return a.getId() == b.getId();
                     }),
                     pool.end());
             }
@@ -476,7 +514,7 @@ namespace rnnd
                     [](Neighbor& a,
                         Neighbor& b)
                     {
-                        return a.id == b.id;
+                        return a.getId() == b.getId();
                     }),
                     pool.end());
             }
@@ -492,8 +530,8 @@ namespace rnnd
             {
                 for (auto&& nn : graph[u].pool)
                 {
-                    std::lock_guard<std::mutex> guard(graph[nn.id].lock);
-                    reverse_pools[nn.id].emplace_back(u, nn.distance, nn.flag);
+                    std::lock_guard<std::mutex> guard(graph[nn.getId()].lock);
+                    reverse_pools[nn.getId()].emplace_back(u, nn.distance, nn.getFlag());
                 }
             }
 
@@ -504,7 +542,8 @@ namespace rnnd
                 auto& pool = graph[u].pool;
                 for (auto&& nn : pool)
                 {
-                    nn.flag = true;
+                    //nn.flag = true;
+                    nn.setTrue();
                 }
                 auto& rpool = reverse_pools[u];
                 rpool.insert(rpool.end(), pool.begin(), pool.end());
@@ -514,7 +553,7 @@ namespace rnnd
                     [](Neighbor& a,
                         Neighbor& b)
                     {
-                        return a.id == b.id;
+                        return a.getId() == b.getId();
                     }),
                     rpool.end());
                 if (rpool.size() > R)
@@ -558,7 +597,7 @@ namespace rnnd
                 nbhood.reserve(K);
                 for (int m = 0; m < K; ++m)
                 {
-                    int id = pool[m].id;
+                    int id = pool[m].getId();
                     nbhood.push_back(static_cast<unsigned>(id));
                 }
             }

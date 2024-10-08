@@ -408,7 +408,7 @@ namespace lsh
 			int lc = width * 2 + 1;
 			knns.resize(n, std::vector<Res>(L * lc, Res(-1, FLT_MAX)));
 
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic, 256)
 			for (int i = np * L; i < np * L + L; ++i) {
 				auto& table = hash_tables[i];
 				int bias = (i - np * L) * lc + width;
@@ -417,8 +417,11 @@ namespace lsh
 					for (int l = 0; l < j; ++l)
 					{
 						{
+							// float inp = calInnerProductReverse(data[ids[table[j].id]],
+							// 	data[table[l].id], dim);
+
 							float inp = calInnerProductReverse(data[ids[table[j].id]],
-								data[table[l].id], dim);
+								data[ids[table[l].id]], dim);
 #if defined(COUNT_CC)
 							cost++;
 #endif
@@ -437,12 +440,90 @@ namespace lsh
 					{
 						{
 							float inp = calInnerProductReverse(data[ids[table[j].id]],
-								data[table[l].id], dim);
+								data[ids[table[l].id]], dim);
 #if defined(COUNT_CC)
 							cost++;
 #endif
 							knns[table[j].id][j - l + bias] = Res(table[l].id, inp);
 							knns[table[l].id][l - j + bias] = Res(table[j].id, inp);
+							// knns[table[j].id].emplace_back(table[l].id, inp);
+							// knns[table[l].id].emplace_back(table[j].id, inp);
+						}
+					}
+				}
+			}
+
+#pragma omp parallel for schedule(dynamic)
+			for (auto& pool : knns)
+			{
+				std::sort(pool.begin(), pool.end());
+				// if (pool.size() > K) pool.resize(K);
+			}
+
+#pragma omp parallel for schedule(dynamic)
+			for (auto& pool : knns)
+				pool.erase(std::unique(pool.begin(), pool.end(), compareId), pool.end());
+
+#pragma omp parallel for schedule(dynamic)
+			for (auto& pool : knns)
+			{
+				// std::sort(pool.begin(), pool.end());
+				if (pool.back().id == -1)
+					pool.pop_back();
+				if (pool.size() > K)
+					pool.resize(K);
+			}
+		}
+
+		void kjoin1_new(std::vector<std::vector<Res>>& knns, std::vector<int>& ids, int np, int K, int width)
+		{
+			int n = hash_tables[np * L].size();
+			if (n < 2 * width) {
+				std::cerr << "The hash table has not enough points!" << std::endl;
+				return;
+			}
+
+			int lc = width * 2 + 1;
+			knns.resize(n, std::vector<Res>(L * lc, Res(-1, FLT_MAX)));
+
+#pragma omp parallel for schedule(dynamic, 256)
+			for (int i = np * L; i < np * L + L; ++i) {
+				auto& table = hash_tables[i];
+				int bias = (i - np * L) * lc + width;
+				for (int j = 0; j < width; ++j)
+				{
+					for (int l = 0; l < j; ++l)
+					{
+						{
+							// float inp = calInnerProductReverse(data[ids[table[j].id]],
+							// 	data[table[l].id], dim);
+
+							float inp = calInnerProductReverse(data[ids[table[j].id]],
+								data[ids[table[l].id]], dim);
+#if defined(COUNT_CC)
+							cost++;
+#endif
+							knns[table[j].id][j - l + bias] = Res(ids[table[l].id], inp);
+							knns[table[l].id][l - j + bias] = Res(ids[table[j].id], inp);
+							// knns[table[j].id].emplace_back(table[l].id, inp);
+							// knns[table[l].id].emplace_back(table[j].id, inp);
+						}
+					}
+				}
+
+#pragma omp parallel for schedule(dynamic, 256)
+				for (int j = width; j < n; ++j)
+				{
+					for (int l = j - width; l < j; ++l)
+					{
+						{
+							float inp = calInnerProductReverse(data[ids[table[j].id]],
+								data[ids[table[l].id]], dim);
+#if defined(COUNT_CC)
+							cost++;
+#endif
+							knns[table[j].id][j - l + bias] = Res(ids[table[l].id], inp);
+							knns[table[l].id][l - j + bias] = Res(ids[table[j].id], inp);
 							// knns[table[j].id].emplace_back(table[l].id, inp);
 							// knns[table[l].id].emplace_back(table[j].id, inp);
 						}
@@ -528,6 +609,62 @@ namespace lsh
 			}
 		}
 
+
+		//find NNS in np1 for the points in np2
+		void kjoin_new(std::vector<std::vector<Res>>& knns, std::vector<int>& ids1, int np1,
+			std::vector<int>& ids2, int np2, int K, int width)
+		{
+			int n1 = hash_tables[np1 * L].size();
+			if (n1 < 2 * width)
+			{
+				std::cerr << "The hash table has not enough points!" << std::endl;
+				return;
+			}
+			int n2 = hash_tables[np2 * L].size();
+			int lc = width * 2 + 1;
+			knns.resize(n2, std::vector<Res>(L * lc, Res(-1, FLT_MAX)));
+			// knns.resize(n2);
+			// for (auto& nnset : knns) nnset.reserve(2 * lc);
+
+#pragma omp parallel for
+			for (int i = 0; i < L; ++i) {
+				auto& table1 = hash_tables[i + np1 * L];
+				auto& table2 = hash_tables[i + np2 * L];
+				int bias = i * lc;
+
+				int pos1 = 0, pos2 = 0;
+
+				while (pos2 < n2) {
+					while (pos1 < n1 && table1[pos1].val < table2[pos2].val) pos1++;
+
+					int start = std::max(pos1 - width, 0);
+					int end = std::min(pos1 + width, n1 - 1);
+
+					auto& vec2 = data[ids2[table2[pos2].id]];
+					for (int j = start;j <= end;++j) {
+						auto& vec1 = data[ids1[table1[j].id]];
+						float dist = calInnerProductReverse(vec1, vec2, data.dim);
+						knns[table2[pos2].id][bias + j - start] = Res(ids1[table1[j].id], dist);
+					}
+					pos2++;
+				}
+			}
+
+#pragma omp parallel for schedule(dynamic)
+			for (auto& pool : knns) {
+				std::sort(pool.begin(), pool.end());
+				// if (pool.size() > K) pool.resize(K);
+			}
+
+#pragma omp parallel for schedule(dynamic)
+			for (auto& pool : knns) pool.erase(std::unique(pool.begin(), pool.end(), compareId), pool.end());
+
+#pragma omp parallel for schedule(dynamic)
+			for (auto& pool : knns) {
+				if (pool.back().id == -1) pool.pop_back();
+				if (pool.size() > K) pool.resize(K);
+			}
+		}
 
 		void calQHash(queryN* q) {
 			//hashvals[i].resize(L, 0);
