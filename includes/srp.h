@@ -546,7 +546,7 @@ namespace lsh
 			for (auto& pool : knns)
 			{
 				// std::sort(pool.begin(), pool.end());
-				if (pool.back().id == -1)
+				while (pool.back().id == -1)
 					pool.pop_back();
 				if (pool.size() > K)
 					pool.resize(K);

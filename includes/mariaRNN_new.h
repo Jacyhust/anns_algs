@@ -612,7 +612,7 @@ class mariaV8
 
 		int len = sqrt(n);
 		//std::vector<std::vector<Res>> nnset(n, std::vector<Res>(n, Res(-1, FLT_MAX)));
-#pragma omp parallel for schedule(dynamic)
+//#pragma omp parallel for schedule(dynamic)
 		for (int j = 0; j < n; ++j) {
 			for (int l = std::max(0, j - len); l < j; ++l) {
 				float dist = calInnerProductReverse(data[parti.EachParti[i][j]], data[parti.EachParti[i][l]], data.dim);
@@ -624,10 +624,10 @@ class mariaV8
 		}
 
 		// #pragma omp parallel for schedule(dynamic)
-		for (int j = 0; j < n; ++j) {
-			std::sort(knng[parti.EachParti[i][j]].begin(), knng[parti.EachParti[i][j]].end());
-			knng[parti.EachParti[i][j]].resize(para.S);
-		}
+		//for (int j = 0; j < n; ++j) {
+		//	std::sort(knng[parti.EachParti[i][j]].begin(), knng[parti.EachParti[i][j]].end());
+		//	if (knng[parti.EachParti[i][j]].size() > para.S)knng[parti.EachParti[i][j]].resize(para.S);
+		//}
 		// auto& apg = knngs[i];
 		// int size = para.S;
 		// if (size > n)

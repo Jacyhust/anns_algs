@@ -18,6 +18,8 @@
 
 #define MAXN (1<<30)
 
+#define COUNT_PD
+
 namespace rnnd
 {
 
@@ -237,13 +239,17 @@ namespace rnnd
         Data data;
         std::atomic<size_t> cost{ 0 };
 
+#ifdef COUNT_PD
+        lsh::progress_display* pd = nullptr;
+#endif
+
         explicit RNNDescent(Data& data_, rnn_para const& para) {
             data = data_;
             ntotal = data.N;
             T1 = para.T1;
             T2 = para.T2;
             S = para.S;
-            R = para.R;
+            R = para.S;
             K0 = para.K0;
         }
 
@@ -272,7 +278,7 @@ namespace rnnd
 #pragma omp parallel
             {
                 std::mt19937 rng(random_seed * 7741 + omp_get_thread_num());
-#pragma omp for
+#pragma omp for simd
                 for (int i = 0; i < ntotal; i++)
                 {
                     std::vector<int> tmp(S);
@@ -317,6 +323,10 @@ namespace rnnd
                 for (int i = 0; i < ntotal; i++) {
                     for (auto& x : init_nns[i]) {
                         graph[i].pool.emplace_back(x.id, x.dist, true);
+                        if (x.id < 0) {
+                            printf("%d pt: %d-%f\n", i, x.id, x.dist);
+                            exit(-1);
+                        }
                         std::make_heap(graph[i].pool.begin(), graph[i].pool.end());
                         graph[i].pool.reserve(L);
                     }
@@ -348,8 +358,7 @@ namespace rnnd
 
         void update_neighbors() {
 #pragma omp parallel for schedule(dynamic, 256)
-            for (int u = 0; u < ntotal; ++u)
-            {
+            for (int u = 0; u < ntotal; ++u){
                 auto& nhood = graph[u];
                 auto& pool = nhood.pool;
                 std::vector<Neighbor> new_pool;
@@ -415,19 +424,25 @@ namespace rnnd
                     std::lock_guard<std::mutex> guard(nhood.lock);
                     pool.insert(pool.end(), new_pool.begin(), new_pool.end());
                 }
+
+#ifdef COUNT_PD
+                ++(*pd);
+#endif
             }
         }
 
 
         void build(const int n, bool verbose) {
-            if (verbose)
-            {
+            if (verbose){
                 printf("Parameters: S=%d, R=%d, T1=%d, T2=%d\n", S, R, T1, T2);
             }
 
             ntotal = n;
             init_graph();
 
+#ifdef COUNT_PD
+            pd = new lsh::progress_display((size_t)ntotal * T1 * T2);
+#endif
             for (int t1 = 0; t1 < T1; ++t1)
             {
                 if (verbose)
@@ -479,23 +494,23 @@ namespace rnnd
             ntotal = n;
             init_graph(init_nns);
 
+#ifdef COUNT_PD
+            pd = new lsh::progress_display((size_t)ntotal * T1 * T2);
+#endif
             for (int t1 = 0; t1 < T1; ++t1)
             {
                 if (verbose)
                 {
                     std::cout << "Iter " << t1 << " : " << std::flush;
                 }
-                for (int t2 = 0; t2 < T2; ++t2)
-                {
+                for (int t2 = 0; t2 < T2; ++t2){
                     update_neighbors();
-                    if (verbose)
-                    {
+                    if (verbose){
                         std::cout << "#" << std::flush;
                     }
                 }
 
-                if (t1 != T1 - 1)
-                {
+                if (t1 != T1 - 1){
                     add_reverse_edges();
                 }
 
