@@ -3,7 +3,7 @@ results/
 indexes/
 .vscode/
 fg
-index_result.txt
+*.txt
 tb
 main
 .vscode/
