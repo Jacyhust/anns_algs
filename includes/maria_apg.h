@@ -25,6 +25,7 @@ class mariaV9
     int width = 20;
     int efC = 80;
     int M = 24;
+    int maxM = 48;
     // The pairs of block that are connected to each other
     struct block_pairs
     {
@@ -51,7 +52,7 @@ class mariaV9
     // char* link_lists = nullptr;
 
     public:
-    mariaV9(Data& data_, float* norms, const std::string& file, Partition& part_, int L_, int K_) : parti(part_)
+    mariaV9(Data& data_, float* norms, const std::string& file, Partition& part_, int L_, int K_) : parti(part_),locks(data_.N)
     {
         data = data_;
         square_norms = norms;
@@ -104,6 +105,7 @@ class mariaV9
         float time = 0.0f;
 
         //lsh::progress_display pd(N);
+        //locks.resize(N);
         knng.resize(N);
 #ifdef COUNT_PD
         srp->resetPD();
@@ -127,7 +129,7 @@ class mariaV9
             std::vector<std::vector<Res>> knns;
             srp->kjoin2_new(knns, parti.EachParti[i], i, para.S, width);
             for (int j = 0;j < knns.size();++j) {
-                knns[j].resize(M);
+                if (knns[j].size() > M)knns[j].resize(M);
                 knng[parti.EachParti[i][j]].swap(knns[j]);
             }
             //pd += knns.size();
@@ -242,7 +244,7 @@ class mariaV9
         while (top_candidates.size() > M) top_candidates.pop();
 
         {//For lock i
-            write_lock(locks[i]);
+            write_lock lock(locks[i]);
             knng[i].clear();
             while (!top_candidates.empty()) {
                 auto top = top_candidates.top();
@@ -254,9 +256,13 @@ class mariaV9
 
         {//For lock i's neighbor
             for (auto& us : knng[i]) {
-                write_lock(locks[us.id]);
+                write_lock lock(locks[us.id]);
                 knng[us.id].emplace_back(i, us.dist);
                 std::push_heap(knng[us.id].begin(), knng[us.id].end());
+                if (knng[us.id].size() > maxM) {
+                    std::pop_heap(knng[us.id].begin(), knng[us.id].end());
+                    knng[us.id].pop_back();
+                }
             }
         }
 
