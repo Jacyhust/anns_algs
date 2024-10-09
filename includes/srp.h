@@ -574,11 +574,15 @@ namespace lsh
 				std::cerr << "The hash table has not enough points!" << std::endl;
 				return;
 			}
-
+			knns.resize(n);
 			std::vector<mp_mutex> locks(n);
 			//std::vector<std::priority_queue<Res>> top_candidates;
 
-			std::vector<lsh::priority_queue> top_candidates(n, K);
+
+			//Caonot initialize them as std::vector<lsh::priority_queue> top_candidates(n);
+			//Otherwise, all heaps have have the same momory position.
+			std::vector<lsh::priority_queue> top_candidates(n);
+			for (int i = 0; i < n; ++i) top_candidates[i].reset(K);
 			// int lc = width * 2 + 1;
 			// knns.resize(n, std::vector<Res>(L * lc, Res(-1, FLT_MAX)));
 
@@ -606,6 +610,9 @@ namespace lsh
 						}
 
 					}
+#ifdef COUNT_PD
+					++(*pd);
+#endif
 				}
 
 #pragma omp parallel for schedule(dynamic, 256)
@@ -630,18 +637,19 @@ namespace lsh
 							if (top_candidates[l].size() > K) top_candidates[l].pop();
 						}
 					}
-				}
 #ifdef COUNT_PD
-				++(*pd);
+					++(*pd);
 #endif
+				}
+
 
 			}
 
 #pragma omp parallel for schedule(dynamic, 256)
 			for (int i = 0;i < n;++i) {
 				knns[i].resize(top_candidates[i].size());
-				memcpy(knns[i].data(), top_candidates.data(), sizeof(Res) * top_candidates[i].size());
-				top_candidates.clear();
+				memcpy(knns[i].data(), top_candidates[i].data(), sizeof(Res) * top_candidates[i].size());
+				top_candidates[i].clear();
 			}
 		}
 

@@ -653,12 +653,13 @@ namespace lsh {
 	//template <typename T>
 	struct  priority_queue
 	{
-		private:
+	private:
 		int size_ = 0;
 		int capacity = 0;
 		Res* data_ = nullptr;
 
-		public:
+	public:
+		priority_queue() = default;
 		priority_queue(int K) {
 			reset(K);
 		}
@@ -710,7 +711,7 @@ namespace lsh {
 		}
 
 		~priority_queue() {
-			delete[] data_;
+			if (data_) delete[] data_;
 		}
 	};
 
