@@ -69,11 +69,12 @@ class mariaV9
         lsh::timer timer;
         if (1 || !exists_test(index_file))
         {
+            std::cout << "MARIAV9 Building ..." << "  seconds.\n";
             float mem = (float)getCurrentRSS() / (1024 * 1024);
             buildIndex();
             float memf = (float)getCurrentRSS() / (1024 * 1024);
             indexing_time = timer.elapsed();
-            std::cout << "MARIA Building time:" << indexing_time << "  seconds.\n";
+            std::cout << "MARIAV9 Building time:" << indexing_time << "  seconds.\n";
             FILE* fp = nullptr;
             fopen_s(&fp, "./indexes/maria_info.txt", "a");
             if (fp)
@@ -96,7 +97,7 @@ class mariaV9
     void buildIndex()
     {
         // lsh::srp srp(data, parti.EachParti, data.N, data.dim, L, K);
-        srp = new lsh::srp(data, parti.EachParti, index_file + "_srp", data.N, data.dim, L, K, 1);
+        srp = new lsh::srp(data, parti.EachParti, index_srp, data.N, data.dim, L, K, 1);
         // return;
         //knngs.resize(parti.numChunks);
         lsh::timer timer;
@@ -152,7 +153,7 @@ class mariaV9
             bfConstruction(id, knng);
 
         }
-        std::cout << "NN Descent TIME: " << timer.elapsed() << "s." << std::endl
+        std::cout << "UPDATE TIME: " << timer.elapsed() << "s." << std::endl
             << std::endl;
         timer.restart();
 
