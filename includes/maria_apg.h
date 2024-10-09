@@ -199,7 +199,7 @@ class mariaV9
         lsh::progress_display pd(knng.size());
 #pragma omp parallel for schedule(dynamic,256)
         for (int i = 0;i < knng.size();++i) {
-            searchInBuilding(i);
+            searchInBuilding1(i);
             ++pd;
         }
     }
