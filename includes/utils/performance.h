@@ -73,7 +73,7 @@ class Performance
 
 		for (int j = 0; j < num0; j++)
 		{
-			float rate = fabs(query.res[j].dist / prep.benchmark.innerproduct[query.qid][j]);
+			float rate = fabs(query.res[j].dist * query.norm / prep.benchmark.innerproduct[query.qid][j]);
 			ratio += rate;
 
 			if (j == num0 - 1) kRatio += rate;

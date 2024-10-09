@@ -489,7 +489,7 @@ class mariaV8
 		index_file = file;
 		// const int min_size = 400;
 		para.S = 36;
-		para.T1 = 2;
+		para.T1 = 4;
 		para.T2 = 4;
 
 		// para.S = 2;
@@ -497,7 +497,7 @@ class mariaV8
 		// para.T2 = 1;
 
 		lsh::timer timer;
-		if (1 || !exists_test(index_file))
+		if (0 || !exists_test(index_file))
 		{
 			float mem = (float)getCurrentRSS() / (1024 * 1024);
 			buildIndex();
@@ -545,7 +545,7 @@ class mariaV8
 				continue;
 			}
 			std::vector<std::vector<Res>> knns;
-			srp->kjoin1_new(knns, parti.EachParti[i], i, para.S, width);
+			srp->kjoin2_new(knns, parti.EachParti[i], i, para.S, width);
 			for (int j = 0;j < knns.size();++j) {
 				knng[parti.EachParti[i][j]].swap(knns[j]);
 			}
@@ -820,8 +820,65 @@ class mariaV8
 		q->time_total = timer.elapsed();
 	}
 
+
+	void knn1(queryN* q)
+	{
+		lsh::timer timer;
+		timer.restart();
+		q->visited.resize(data.N, false);
+		int ef = 180;
+		for (int i = parti.numChunks - 1; i >= 0; --i)
+		{
+			if ((!q->top_candidates.empty()) && (-(q->top_candidates.top().dist)) >
+				q->norm * sqrt(parti.MaxLen[i]))
+				break;
+
+			if (parti.EachParti[i].size() < 400)
+			{
+				// std::cout<<i<<","<<parti.EachParti[i].size()<<"..."<<std::endl;
+				// exit(-1);
+				auto& top_candidates = q->top_candidates;
+				for (auto& x : parti.EachParti[i])
+				{
+					float dist = calInnerProductReverse(q->queryPoint, data[x], data.dim);
+
+					top_candidates.emplace(x, dist);
+					if (top_candidates.size() > q->k)
+						top_candidates.pop();
+				}
+				q->cost += parti.EachParti[i].size();
+				// break;
+				continue;
+			}
+
+			// continue;
+			auto& knng = tangential_lists;
+
+			searchInKnng_new(knng, q, parti.EachParti[i][0], ef);
+
+			break;
+		}
+
+		auto& top_candidates = q->top_candidates;
+
+		q->res.resize(q->k);
+		int pos = q->k;
+		while (!top_candidates.empty())
+		{
+			q->res[--pos] = top_candidates.top();
+			top_candidates.pop();
+		}
+
+		q->time_total = timer.elapsed();
+	}
 	// void GetTables(Preprocess& prep);
 	// bool IsBuilt(const std::string& file);
+
+	void knn2(queryN* q) {}
+	void knn3(queryN* q) {}
+	void knn4(queryN* q) {}
+	void knn5(queryN* q) {}
+	void knn6(queryN* q) {}
 
 	void compute_maxsize()
 	{
@@ -1443,7 +1500,7 @@ class LiteMARIA
 
 
 		int efS = q->k + ef;
-		efS = 180;
+		efS = 280;
 		while (!(q->top_candidates.empty())) {
 			auto top = q->top_candidates.top();
 			candidate_set.emplace(top.id, -top.dist);

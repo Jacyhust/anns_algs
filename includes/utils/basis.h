@@ -603,30 +603,114 @@ inline bool exists_test(const std::string& name) {
 #include <intrin.h>
 #endif
 
-		//For two uint64_t numbers k1 and k2, compute the number of their differences in terms of bits
-		inline int bitCounts(uint64_t k1, uint64_t k2)
-		{
+//For two uint64_t numbers k1 and k2, compute the number of their differences in terms of bits
+inline int bitCounts(uint64_t k1, uint64_t k2)
+{
 #if defined(__GNUC__)
-			return __builtin_popcount(k1 ^ k2);
+	return __builtin_popcount(k1 ^ k2);
 #elif defined _MSC_VER
-			return (int)__popcnt(k1 ^ k2);
+	return (int)__popcnt(k1 ^ k2);
 #else
-			std::cout << BOLDRED << "WARNING:" << RED << "bitCounts Undefined in this compipler.\nYou can find the related functions in your system. \n" << RESET;
-			exit(-1);
+	std::cout << BOLDRED << "WARNING:" << RED << "bitCounts Undefined in this compipler.\nYou can find the related functions in your system. \n" << RESET;
+	exit(-1);
 #endif
 
-		}
+}
 
-		//For two uint64_t numbers k1 and k2, compute the number of their differences in terms of bits
-		inline int bitCounts(uint64_t* k1, uint64_t* k2)
-		{
+//For two uint64_t numbers k1 and k2, compute the number of their differences in terms of bits
+inline int bitCounts(uint64_t* k1, uint64_t* k2)
+{
 #if defined(__GNUC__)
-			return __builtin_popcount((*k1) ^ (*k2));
+	return __builtin_popcount((*k1) ^ (*k2));
 #elif defined _MSC_VER
-			return (int)__popcnt((*k1) ^ (*k2));
+	return (int)__popcnt((*k1) ^ (*k2));
 #else
-			std::cout << BOLDRED << "WARNING:" << RED << "bitCounts Undefined in this compipler.\nYou can find the related functions in your system. \n" << RESET;
-			exit(-1);
+	std::cout << BOLDRED << "WARNING:" << RED << "bitCounts Undefined in this compipler.\nYou can find the related functions in your system. \n" << RESET;
+	exit(-1);
 #endif
 
+}
+
+#if (__cplusplus >= 201703L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 201703L) && (_MSC_VER >= 1913))
+#include <shared_mutex>
+typedef std::shared_mutex mp_mutex;
+//In C++17 format, read_lock can be shared
+typedef std::shared_lock<std::shared_mutex> read_lock;
+typedef std::unique_lock<std::shared_mutex> write_lock;
+#else
+typedef std::mutex mp_mutex;
+//Not in C++17 format, read_lock is the same as write_lock and can not be shared
+typedef std::unique_lock<std::mutex> read_lock;
+typedef std::unique_lock<std::mutex> write_lock;
+#endif // _HAS_CXX17
+
+namespace lsh {
+	//My defined priority queue for Res 
+	//Compared to std::priority_queue:
+	//1.Support duplicating
+	//2.Support for accessing the array
+	//template <typename T>
+	struct  priority_queue
+	{
+		private:
+		int size_ = 0;
+		int capacity = 0;
+		Res* data_ = nullptr;
+
+		public:
+		priority_queue(int K) {
+			reset(K);
 		}
+
+		void reset(int K) {
+			capacity = K + 1;
+			delete[] data_;
+			data_ = new Res[capacity];
+		}
+
+		void emplace(int id, float dist) {
+			data_[size_++] = Res(id, dist);
+			std::push_heap(data_, data_ + size_);
+		}
+
+		void emplace_with_duplication(int id, float dist) {
+			data_[size_] = Res(id, dist);
+			for (int i = 0;i < size_;++i) {
+				if (compareId(data_[size_], data_[i])) return;
+			}
+			size_++;
+			std::push_heap(data_, data_ + size_);
+		}
+
+		void pop() {
+			std::pop_heap(data_, data_ + size_);
+			size_--;
+		}
+
+		int size() {
+			return size_;
+		}
+
+		bool empty() {
+			return size_ == 0;
+		}
+
+		Res& top() {
+			return data_[0];
+		}
+
+		Res*& data() {
+			return data_;
+		}
+
+		void clear() {
+			delete[] data_;
+			data_ = nullptr;
+		}
+
+		~priority_queue() {
+			delete[] data_;
+		}
+	};
+
+}

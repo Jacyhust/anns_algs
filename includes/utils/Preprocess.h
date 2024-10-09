@@ -484,7 +484,7 @@ class queryN
 	unsigned qid = -1;
 
 	float beta = 0;
-	float norm = 0.0f;
+	float norm = 1.0f;
 	unsigned cost = 0;
 
 	//#access;
@@ -505,21 +505,21 @@ class queryN
 	std::vector<Res> res;
 
 	public:
-	queryN(unsigned id, float c_, unsigned k_, Preprocess& prep, float beta_) {
-		qid = id;
-		c = c_;
-		k = k_;
-		beta = beta_;
-		//myData = prep.data.val;
-		//dim = prep.data.dim + 1;
-		queryPoint = prep.queries[id];
-		float dim = prep.data.dim;
-		norm = sqrt(cal_inner_product(queryPoint, queryPoint, prep.data.dim));
-		for (int i = 0;i < dim;++i) {
-			queryPoint[i] /= norm;
-		}
-		//search();
-	}
+	// queryN(unsigned id, float c_, unsigned k_, Preprocess& prep, float beta_) {
+	// 	qid = id;
+	// 	c = c_;
+	// 	k = k_;
+	// 	beta = beta_;
+	// 	//myData = prep.data.val;
+	// 	//dim = prep.data.dim + 1;
+	// 	queryPoint = prep.queries[id];
+	// 	float dim = prep.data.dim;
+	// 	norm = sqrt(cal_inner_product(queryPoint, queryPoint, prep.data.dim));
+	// 	// for (int i = 0;i < dim;++i) {
+	// 	// 	queryPoint[i] /= norm;
+	// 	// }
+	// 	//search();
+	// }
 
 	queryN(unsigned id, float c_, unsigned k_, float* query, int dim, float beta_) {
 		qid = id;
@@ -528,12 +528,17 @@ class queryN
 		beta = beta_;
 		//myData = prep.data.val;
 		//dim = dim;
-		queryPoint = query;
+		//std::vector<float> qvec()
+		queryPoint = new float[dim];
+		memcpy(queryPoint, query, sizeof(float) * dim);
+		//queryPoint = query;
 
 		norm = sqrt(cal_inner_product(queryPoint, queryPoint, dim));
 		for (int i = 0;i < dim;++i) {
-			queryPoint[i] /= norm;
+			queryPoint[i] /= norm + 1e-30f;
 		}
+		//float norm1 = sqrt(cal_inner_product(queryPoint, queryPoint, dim));
+
 		//search();
 	}
 	//void search();

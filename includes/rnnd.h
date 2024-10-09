@@ -249,7 +249,7 @@ namespace rnnd
             T1 = para.T1;
             T2 = para.T2;
             S = para.S;
-            R = para.S;
+            R = para.R;
             K0 = para.K0;
         }
 
@@ -358,7 +358,7 @@ namespace rnnd
 
         void update_neighbors() {
 #pragma omp parallel for schedule(dynamic, 256)
-            for (int u = 0; u < ntotal; ++u){
+            for (int u = 0; u < ntotal; ++u) {
                 auto& nhood = graph[u];
                 auto& pool = nhood.pool;
                 std::vector<Neighbor> new_pool;
@@ -433,7 +433,7 @@ namespace rnnd
 
 
         void build(const int n, bool verbose) {
-            if (verbose){
+            if (verbose) {
                 printf("Parameters: S=%d, R=%d, T1=%d, T2=%d\n", S, R, T1, T2);
             }
 
@@ -503,14 +503,14 @@ namespace rnnd
                 {
                     std::cout << "Iter " << t1 << " : " << std::flush;
                 }
-                for (int t2 = 0; t2 < T2; ++t2){
+                for (int t2 = 0; t2 < T2; ++t2) {
                     update_neighbors();
-                    if (verbose){
+                    if (verbose) {
                         std::cout << "#" << std::flush;
                     }
                 }
 
-                if (t1 != T1 - 1){
+                if (t1 != T1 - 1) {
                     add_reverse_edges();
                 }
 

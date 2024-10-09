@@ -28,6 +28,16 @@ int main(int argc, char* argv[])
     // std::cout << "diffcnt is:" << bitCounts(arr64, arr64 + 1) << std::endl;
     // return 0;
 
+    // Res* a = new Res[5];
+    // a[1] = Res(1, 1.0);
+    // std::vector<Res> b(a, a + 5);
+    // std::cout << b[1].id << std::endl;
+    // a[1].id = 2;
+    // std::cout << b[1].id << std::endl;
+    // std::cout << a << std::endl;
+    // std::cout << b.data() << std::endl;
+    // return 1;
+
     std::string dataset = "audio";
     if (argc > 1) {
         dataset = argv[1];
@@ -94,11 +104,12 @@ int main(int argc, char* argv[])
     //res.push_back(searchFunction(mariaV6, qs, prep));
     //res.push_back(searchFunction(mariaV7, qs, prep));
     //res.push_back(searchFunction(mariaV8, qs, prep));
+    //res.push_back(searchFunctionFn(mariaV8, qs, prep, 1));
     res.push_back(searchFunction(lm, qs, prep));
     res.push_back(searchFunctionFn(lm, qs, prep, 1));
     res.push_back(searchFunctionFn(lm, qs, prep, 2));
     res.push_back(searchFunctionFn(lm, qs, prep, 3));
-    res.push_back(searchFunctionFn(lm, qs, prep, 4));
+    //res.push_back(searchFunctionFn(lm, qs, prep, 4));
     res.push_back(searchFunctionFn(lm, qs, prep, 6));
     //res.push_back(searchFunctionFn(lm, qs, prep, 2));
     saveAndShow(c, k_, dataset, res);

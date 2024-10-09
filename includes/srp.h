@@ -553,6 +553,81 @@ namespace lsh
 			}
 		}
 
+
+		void kjoin2_new(std::vector<std::vector<Res>>& knns, std::vector<int>& ids, int np, int K, int width)
+		{
+			int n = hash_tables[np * L].size();
+			if (n < 2 * width) {
+				std::cerr << "The hash table has not enough points!" << std::endl;
+				return;
+			}
+
+			std::vector<mp_mutex> locks(n);
+			//std::vector<std::priority_queue<Res>> top_candidates;
+
+			std::vector<lsh::priority_queue> top_candidates(n, K);
+			// int lc = width * 2 + 1;
+			// knns.resize(n, std::vector<Res>(L * lc, Res(-1, FLT_MAX)));
+
+#pragma omp parallel for schedule(dynamic, 256)
+			for (int i = np * L; i < np * L + L; ++i) {
+				auto& table = hash_tables[i];
+				//int bias = (i - np * L) * lc + width;
+				for (int j = 0; j < width; ++j) {
+					for (int l = 0; l < j; ++l) {
+						float inp = calInnerProductReverse(data[ids[table[j].id]],
+							data[ids[table[l].id]], dim);
+#if defined(COUNT_CC)
+						cost++;
+#endif
+						{
+							write_lock lock(locks[table[j].id]);
+							top_candidates[table[j].id].emplace_with_duplication(ids[table[l].id], inp);
+							if (top_candidates[table[j].id].size() > K) top_candidates[table[j].id].pop();
+						}
+
+						{
+							write_lock lock(locks[table[l].id]);
+							top_candidates[table[l].id].emplace_with_duplication(ids[table[j].id], inp);
+							if (top_candidates[table[l].id].size() > K) top_candidates[table[l].id].pop();
+						}
+
+					}
+				}
+
+#pragma omp parallel for schedule(dynamic, 256)
+				for (int j = width; j < n; ++j)
+				{
+					for (int l = j - width; l < j; ++l)
+					{
+						float inp = calInnerProductReverse(data[ids[table[j].id]],
+							data[ids[table[l].id]], dim);
+#if defined(COUNT_CC)
+						cost++;
+#endif
+						{
+							write_lock lock(locks[j]);
+							top_candidates[j].emplace_with_duplication(ids[table[l].id], inp);
+							if (top_candidates[j].size() > K) top_candidates[j].pop();
+						}
+
+						{
+							write_lock lock(locks[l]);
+							top_candidates[l].emplace_with_duplication(ids[table[j].id], inp);
+							if (top_candidates[l].size() > K) top_candidates[l].pop();
+						}
+					}
+				}
+			}
+
+#pragma omp parallel for schedule(dynamic, 256)
+			for (int i = 0;i < n;++i) {
+				knns[i].resize(top_candidates[i].size());
+				memcpy(knns[i].data(), top_candidates.data(), sizeof(Res) * top_candidates[i].size());
+				top_candidates.clear();
+			}
+		}
+
 		//find NNS in np1 for the points in np2
 		void kjoin(std::vector<std::vector<Res>>& knns, std::vector<int>& ids1, int np1,
 			std::vector<int>& ids2, int np2, int K, int width)
