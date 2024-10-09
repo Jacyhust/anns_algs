@@ -24,6 +24,7 @@
 #include "StructType.h"
 
  //#define COUNT_CC
+#define COUNT_PD
 
 struct Res//the result of knns
 {

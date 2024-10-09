@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
     auto& queries = prep.queries;
 
     queries.N = 100;
-    int repeat = 1000;
+    int repeat = 10;
 #if defined(_DEBUG) || defined(_MSC_VER)
     repeat = 1;
 #endif // _DEBUG

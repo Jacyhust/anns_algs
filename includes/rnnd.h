@@ -18,7 +18,7 @@
 
 #define MAXN (1<<30)
 
-#define COUNT_PD
+
 
 namespace rnnd
 {

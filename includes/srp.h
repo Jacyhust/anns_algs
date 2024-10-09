@@ -553,7 +553,20 @@ namespace lsh
 			}
 		}
 
+#ifdef COUNT_PD
+		lsh::progress_display* pd = nullptr;
+		void resetPD() {
+			pd = new lsh::progress_display((size_t)L * hashvals.size());
+		}
 
+		void updatePD(int k) {
+			(*pd) += L * k;
+		}
+
+		void dropPD() {
+			delete pd;
+		}
+#endif
 		void kjoin2_new(std::vector<std::vector<Res>>& knns, std::vector<int>& ids, int np, int K, int width)
 		{
 			int n = hash_tables[np * L].size();
@@ -618,6 +631,10 @@ namespace lsh
 						}
 					}
 				}
+#ifdef COUNT_PD
+				++(*pd);
+#endif
+
 			}
 
 #pragma omp parallel for schedule(dynamic, 256)

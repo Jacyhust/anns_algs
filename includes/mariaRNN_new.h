@@ -497,7 +497,7 @@ class mariaV8
 		// para.T2 = 1;
 
 		lsh::timer timer;
-		if (0 || !exists_test(index_file))
+		if (1 || !exists_test(index_file))
 		{
 			float mem = (float)getCurrentRSS() / (1024 * 1024);
 			buildIndex();
@@ -532,7 +532,11 @@ class mariaV8
 		lsh::timer timer;
 		float time = 0.0f;
 		std::vector<std::vector<Res>> knng(N);
-		lsh::progress_display pd(N);
+		//lsh::progress_display pd(N);
+
+#ifdef COUNT_PD
+		srp->resetPD();
+#endif
 		//#pragma omp parallel for schedule(dynamic)
 		for (int i = parti.numChunks - 1; i >= 0; --i) {
 			// if (parti.EachParti[i].size() < 100) {
@@ -541,7 +545,10 @@ class mariaV8
 			// }
 			if (parti.EachParti[i].size() < 256) {
 				bfConstruction(i, knng);
-				pd += parti.EachParti[i].size();
+#ifdef COUNT_PD
+				srp->updatePD(parti.EachParti[i].size());
+#endif
+				//pd += parti.EachParti[i].size();
 				continue;
 			}
 			std::vector<std::vector<Res>> knns;
@@ -549,7 +556,7 @@ class mariaV8
 			for (int j = 0;j < knns.size();++j) {
 				knng[parti.EachParti[i][j]].swap(knns[j]);
 			}
-			pd += knns.size();
+			//pd += knns.size();
 		}
 
 		std::cout << "SRP Init TIME: " << timer.elapsed() << "s." << std::endl
