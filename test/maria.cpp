@@ -6,8 +6,10 @@
 //#include "../includes/RNNDescent.h"
 //#include "../includes/utils/io.hpp"
 #include "../includes/utils/StructType.h"
-#include "../includes/mariaRNN_new.h"
 #include "../includes/utils/performance.h"
+
+#include "../includes/mariaRNN_new.h"
+#include "../includes/maria_apg.h"
 
 #if defined(unix) || defined(__unix__)
 //std::string data_fold = "/home/xizhao/dataset/", index_fold = " ";
@@ -22,21 +24,10 @@ std::string data_fold2 = data_fold + ("MIPS/");
 
 int main(int argc, char* argv[])
 {
-    // uint64_t arr64[2] = { 63,64 };
-    // std::cout << "1st ele is:" << arr64[0] << std::endl;
-    // std::cout << "1st ele is:" << arr64[1] << std::endl;
-    // std::cout << "diffcnt is:" << bitCounts(arr64, arr64 + 1) << std::endl;
-    // return 0;
-
-    // Res* a = new Res[5];
-    // a[1] = Res(1, 1.0);
-    // std::vector<Res> b(a, a + 5);
-    // std::cout << b[1].id << std::endl;
-    // a[1].id = 2;
-    // std::cout << b[1].id << std::endl;
-    // std::cout << a << std::endl;
-    // std::cout << b.data() << std::endl;
-    // return 1;
+    // std::vector<int> arr = { 1,2,3 };
+    // std::cout << "size=" << arr.size() << std::endl;
+    // std::make_heap(arr.begin(), arr.end());
+    // std::cout << "size=" << arr.size() << std::endl;
 
     std::string dataset = "audio";
     if (argc > 1) {
@@ -44,7 +35,7 @@ int main(int argc, char* argv[])
     }
     std::string argvStr[4];
     argvStr[1] = (dataset);
-    argvStr[2] = (dataset + ".index");
+    argvStr[2] = (dataset);
     argvStr[3] = (dataset + ".bench_graph");
 
     std::cout << "Using MARIA for " << argvStr[1] << std::endl;
@@ -63,8 +54,8 @@ int main(int argc, char* argv[])
     Partition parti(c, prep);
     //mariaV6 mariaV6(prep.data, parti, L, K);
     //mariaV7 mariaV7(prep.data, parti, L, K);
-    mariaV8 mariaV8(prep.data, prep.SquareLen, index_fold + argvStr[2] + "_maria", parti, L, K);
-    LiteMARIA lm(prep.data, index_fold + argvStr[2] + "_maria", parti);
+    //mariaV9 mariaV9(prep.data, prep.SquareLen, index_fold + argvStr[2] + "_maria", parti, L, K);
+
     //mariaV8.showInfo();
     //lm.showInfo();
     float c_ = 0.5;
@@ -105,6 +96,19 @@ int main(int argc, char* argv[])
     //res.push_back(searchFunction(mariaV7, qs, prep));
     //res.push_back(searchFunction(mariaV8, qs, prep));
     //res.push_back(searchFunctionFn(mariaV8, qs, prep, 1));
+
+    //mariaV6 mariaV6(prep.data, parti, L, K);
+    //res.push_back(searchFunction(mariaV6, qs, prep));
+
+    mariaV8 mariaV8(prep.data, prep.SquareLen, index_fold + argvStr[2], parti, L, K);
+    res.push_back(searchFunction(mariaV8, qs, prep));
+
+    mariaV9 mariaV9(prep.data, prep.SquareLen, index_fold + argvStr[2], parti, L, K);
+    res.push_back(searchFunction(mariaV9, qs, prep));
+
+
+    LiteMARIA lm(prep.data, index_fold + argvStr[2] + ".mariaV8",
+        index_fold + argvStr[2] + ".srp", parti);
     res.push_back(searchFunction(lm, qs, prep));
     res.push_back(searchFunctionFn(lm, qs, prep, 1));
     res.push_back(searchFunctionFn(lm, qs, prep, 2));

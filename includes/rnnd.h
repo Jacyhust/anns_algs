@@ -540,7 +540,7 @@ namespace rnnd
         void add_reverse_edges() {
             std::vector<std::vector<Neighbor>> reverse_pools(ntotal);
 
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
             for (int u = 0; u < ntotal; ++u)
             {
                 for (auto&& nn : graph[u].pool)
@@ -600,19 +600,37 @@ namespace rnnd
 
         void extract_index_graph(std::vector<std::vector<unsigned>>& idx_graph) {
             auto n{ ntotal };
+            std::vector<std::vector<Neighbor>> reverse_pools(ntotal);
+
+#pragma omp parallel for
+            for (int u = 0; u < ntotal; ++u)
+            {
+                for (auto&& nn : graph[u].pool)
+                {
+                    std::lock_guard<std::mutex> guard(graph[nn.getId()].lock);
+                    reverse_pools[nn.getId()].emplace_back(u, nn.distance, nn.getFlag());
+                }
+            }
             //printf("n = %d\n", n);
             idx_graph.clear();
             idx_graph.resize(n);
+            K0 /= 2;
 #pragma omp parallel for
-            for (int u = 0; u < n; ++u)
-            {
+            for (int u = 0; u < n; ++u) {
                 auto& pool = graph[u].pool;
                 int K = std::min(K0, (int)pool.size());
+                //K /= 2;
                 auto& nbhood = idx_graph[u];
                 nbhood.reserve(K);
                 for (int m = 0; m < K; ++m)
                 {
                     int id = pool[m].getId();
+                    nbhood.push_back(static_cast<unsigned>(id));
+                }
+                K = std::min(K0, (int)reverse_pools[u].size());
+                for (int m = 0; m < K; ++m)
+                {
+                    int id = reverse_pools[u][m].getId();
                     nbhood.push_back(static_cast<unsigned>(id));
                 }
             }

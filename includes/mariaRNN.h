@@ -56,6 +56,7 @@ class mariaV6
 		para.S = 36;
 		para.T1 = 2;
 		para.T2 = 4;
+		para.K0 = 48;
 
 		lsh::timer timer;
 		std::cout << "CONSTRUCTING MARIAV6..." << std::endl;
@@ -839,7 +840,7 @@ class mariaV8
 	void compute_maxsize()
 	{
 		int i = parti.numChunks - 1;
-		size_per_point += para.S;
+		size_per_point += para.K0;
 		int init_S = 32;
 		int j = 1;
 		//size_per_point += para.S;
@@ -1519,3 +1520,5 @@ class LiteMARIA
 		std::vector<bool>().swap(q->visited);
 	}
 };
+
+

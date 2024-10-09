@@ -442,6 +442,7 @@ class mariaV8
 {
 	private:
 	std::string index_file;
+	std::string index_srp;
 	Partition& parti;
 	//std::vector<std::vector<std::vector<uint32_t>>> knngs; // edges in each block
 	std::vector<std::vector<uint32_t>> tangential_lists;
@@ -492,6 +493,8 @@ class mariaV8
 		para.T1 = 4;
 		para.T2 = 4;
 
+		index_file = file + ".mariaV9";
+		index_srp = file + ".srp";
 		// para.S = 2;
 		// para.T1 = 1;
 		// para.T2 = 1;
@@ -526,7 +529,7 @@ class mariaV8
 	void buildIndex()
 	{
 		// lsh::srp srp(data, parti.EachParti, data.N, data.dim, L, K);
-		srp = new lsh::srp(data, parti.EachParti, index_file + "_srp", data.N, data.dim, L, K, 1);
+		srp = new lsh::srp(data, parti.EachParti, index_srp, data.N, data.dim, L, K, 1);
 		// return;
 		//knngs.resize(parti.numChunks);
 		lsh::timer timer;
@@ -1040,11 +1043,11 @@ class LiteMARIA
 	public:
 	int ef = 200;
 	// Only allow to initialize this class by reading the file
-	LiteMARIA(Data& data_, const std::string& file, Partition& parti)
+	LiteMARIA(Data& data_, const std::string& file, const std::string& srp_file, Partition& parti)
 	{
 		data = data_;
 		buildFn();
-		srp = new lsh::srp(data, parti.EachParti, file + "_srp", data.N, data.dim);
+		srp = new lsh::srp(data, parti.EachParti, srp_file, data.N, data.dim);
 		std::cout << "Loading index from " << file << ":\n";
 		float mem = (float)getCurrentRSS() / (1024 * 1024);
 		loadIndex(file);
@@ -1558,3 +1561,4 @@ class LiteMARIA
 		std::vector<bool>().swap(q->visited);
 	}
 };
+

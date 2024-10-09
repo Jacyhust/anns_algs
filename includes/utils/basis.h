@@ -24,7 +24,7 @@
 #include "StructType.h"
 
  //#define COUNT_CC
-#define COUNT_PD
+//#define COUNT_PD
 
 struct Res//the result of knns
 {
@@ -653,12 +653,12 @@ namespace lsh {
 	//template <typename T>
 	struct  priority_queue
 	{
-	private:
+		private:
 		int size_ = 0;
 		int capacity = 0;
 		Res* data_ = nullptr;
 
-	public:
+		public:
 		priority_queue() = default;
 		priority_queue(int K) {
 			reset(K);
