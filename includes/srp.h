@@ -626,15 +626,15 @@ namespace lsh
 						cost++;
 #endif
 						{
-							write_lock lock(locks[j]);
-							top_candidates[j].emplace_with_duplication(ids[table[l].id], inp);
-							if (top_candidates[j].size() > K) top_candidates[j].pop();
+							write_lock lock(locks[table[j].id]);
+							top_candidates[table[j].id].emplace_with_duplication(ids[table[l].id], inp);
+							if (top_candidates[table[j].id].size() > K) top_candidates[table[j].id].pop();
 						}
 
 						{
-							write_lock lock(locks[l]);
-							top_candidates[l].emplace_with_duplication(ids[table[j].id], inp);
-							if (top_candidates[l].size() > K) top_candidates[l].pop();
+							write_lock lock(locks[table[l].id]);
+							top_candidates[table[l].id].emplace_with_duplication(ids[table[j].id], inp);
+							if (top_candidates[table[l].id].size() > K) top_candidates[table[l].id].pop();
 						}
 					}
 #ifdef COUNT_PD
