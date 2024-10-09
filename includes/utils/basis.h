@@ -675,6 +675,11 @@ namespace lsh {
 			std::push_heap(data_, data_ + size_);
 		}
 
+		void push(Res res) {
+			data_[size_++] = res;
+			std::push_heap(data_, data_ + size_);
+		}
+
 		void emplace_with_duplication(int id, float dist) {
 			data_[size_] = Res(id, dist);
 			for (int i = 0;i < size_;++i) {
