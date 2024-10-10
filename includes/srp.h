@@ -688,7 +688,8 @@ namespace lsh
 					for (int j = start;j <= end;++j) {
 						auto& vec1 = data[ids1[table1[j].id]];
 						float dist = calInnerProductReverse(vec1, vec2, data.dim);
-						knns[table2[pos2].id][bias + j - start] = Res(table1[j].id, dist);
+						//knns[table2[pos2].id][bias + j - start] = Res(table1[j].id, dist);
+						knns[table2[pos2].id][bias + j - start] = Res(ids1[table1[j].id], dist);
 					}
 					pos2++;
 				}
