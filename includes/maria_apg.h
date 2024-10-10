@@ -505,7 +505,8 @@ class mariaV9
                     int u = us.id;
                     if (visited_sets.find(u) != visited_sets.end()) continue;
                     visited_sets.emplace(u);
-                    float dist = cal_inner_product(q, data[parti.EachParti[bp.block1_id][u]], dim);
+                    //float dist = cal_inner_product(q, data[parti.EachParti[bp.block1_id][u]], dim);
+                    float dist = cal_inner_product(q, data[u], dim);
                     //candidate_set.emplace(u, dist);
                     top_candidates.emplace(u, -dist);
                     if (top_candidates.size() > bp.S) top_candidates.pop();
