@@ -106,9 +106,6 @@ int main(int argc, char* argv[])
     mariaV8 mariaV8(prep.data, prep.SquareLen, index_fold + argvStr[2], parti, L, K);
     res.push_back(searchFunction(mariaV8, qs, prep));
 
-    
-
-
     LiteMARIA lm(prep.data, index_fold + argvStr[2] + ".mariaV8",
         index_fold + argvStr[2] + ".srp", parti);
     res.push_back(searchFunction(lm, qs, prep));

@@ -48,11 +48,11 @@ class mariaV9
     size_t size_per_point = 16;
     float indexing_time = 0.0f;
     float* square_norms = nullptr;
-    std::string alg_name = "mariaV8";
+    std::string alg_name = "mariaV9";
     // char* link_lists = nullptr;
 
     public:
-    mariaV9(Data& data_, float* norms, const std::string& file, Partition& part_, int L_, int K_) : parti(part_),locks(data_.N)
+    mariaV9(Data& data_, float* norms, const std::string& file, Partition& part_, int L_, int K_) : parti(part_), locks(data_.N)
     {
         data = data_;
         square_norms = norms;
@@ -197,22 +197,24 @@ class mariaV9
 
     void update() {
         lsh::progress_display pd(knng.size());
-#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic,256)
         for (int i = 0;i < knng.size();++i) {
-            searchInBuilding(i);
+            searchInBuilding1(i);
             ++pd;
         }
     }
 
     void searchInBuilding(int i) {
-        if (knng[i].empty()) return;
+        {
+            read_lock lock(locks[i]);
+            if (knng[i].empty()) return;
+        }
 
         float* q = data[i];
         std::priority_queue<Res> top_candidates, candidate_set;
         //std::vector<bool> visited(knng1.size(), false);
         std::unordered_set<int> visited;
-        for (auto& res : knng[i])
-        {
+        for (auto& res : knng[i]) {
             top_candidates.push(res);
             res.dist *= -1.0f;
             candidate_set.push(res);
@@ -228,8 +230,22 @@ class mariaV9
             candidate_set.pop();
             if (-top.dist > top_candidates.top().dist)
                 break;
-            for (auto& us : knng[top.id]) {
-                int u = us.id;
+
+            std::vector<int> nnset;
+            {
+                read_lock lock(locks[top.id]);
+                nnset.reserve(maxM);
+                for (auto& us : knng[top.id]) {
+                    int u = us.id;
+                    if (visited.find(u) != visited.end()) continue;
+                    visited.emplace(u);
+
+                    nnset.emplace_back(u);
+                }
+            }
+
+            for (auto& u : nnset) {
+                //int u = us.id;
                 if (visited.find(u) != visited.end()) continue;
                 visited.emplace(u);
 
@@ -255,6 +271,7 @@ class mariaV9
         }
 
         {//For lock i's neighbor
+            read_lock lock(locks[i]);
             for (auto& us : knng[i]) {
                 write_lock lock(locks[us.id]);
                 knng[us.id].emplace_back(i, us.dist);
@@ -264,6 +281,109 @@ class mariaV9
                     knng[us.id].pop_back();
                 }
             }
+        }
+
+
+    }
+
+    void searchInBuilding1(int id) {
+        {
+            read_lock lock(locks[id]);
+            if (knng[id].empty()) return;
+        }
+
+        float* q = data[id];
+        lsh::priority_queue top_candidates(efC);
+        std::priority_queue<Res> candidate_set;
+        //std::vector<bool> visited(knng1.size(), false);
+        std::unordered_set<int> visited;
+
+        {
+            read_lock lock(locks[id]);
+            for (auto& res : knng[id]) {
+                top_candidates.push(res);
+                res.dist *= -1.0f;
+                candidate_set.push(res);
+                visited.emplace(res.id);
+                //visited[res.id] = true;
+            }
+        }
+
+
+        while (top_candidates.size() > efC)
+            top_candidates.pop();
+
+        while (!candidate_set.empty()) {
+            auto top = candidate_set.top();
+            candidate_set.pop();
+            if (-top.dist > top_candidates.top().dist)
+                break;
+
+            std::vector<int> nnset;
+            {
+                read_lock lock(locks[top.id]);
+                nnset.reserve(maxM);
+                for (auto& us : knng[top.id]) {
+                    int u = us.id;
+                    if (visited.find(u) != visited.end()) continue;
+                    visited.emplace(u);
+
+                    nnset.emplace_back(u);
+                }
+            }
+
+            for (auto& u : nnset) {
+                //int u = us.id;
+                if (visited.find(u) != visited.end()) continue;
+                visited.emplace(u);
+
+                float dist = cal_inner_product(q, data[u], dim);
+                candidate_set.emplace(u, dist);
+                top_candidates.emplace(u, -dist);
+                if (top_candidates.size() > efC)
+                    top_candidates.pop();
+            }
+        }
+
+        while (top_candidates.size() > M) top_candidates.pop();
+
+        auto nnset = top_candidates.data();
+
+        {//For lock i
+            write_lock lock(locks[id]);
+            knng[id].clear();
+            for (int i = 0;i < top_candidates.size();++i) {
+                knng[id].emplace_back(nnset[i]);
+            }
+            // while (!top_candidates.empty()) {
+            //     auto top = top_candidates.top();
+            //     knng[id].emplace_back(top);
+            //     top_candidates.pop();
+            // }
+            std::make_heap(knng[id].begin(), knng[id].end());
+        }
+
+        {//For lock i's neighbor
+            //read_lock lock(locks[id]);
+            for (int i = 0;i < top_candidates.size();++i) {
+                auto& us = nnset[i];
+                write_lock lock(locks[us.id]);
+                knng[us.id].emplace_back(id, us.dist);
+                std::push_heap(knng[us.id].begin(), knng[us.id].end());
+                if (knng[us.id].size() > maxM) {
+                    std::pop_heap(knng[us.id].begin(), knng[us.id].end());
+                    knng[us.id].pop_back();
+                }
+            }
+            // for (auto& us : knng[id]) {
+            //     write_lock lock(locks[us.id]);
+            //     knng[us.id].emplace_back(id, us.dist);
+            //     std::push_heap(knng[us.id].begin(), knng[us.id].end());
+            //     if (knng[us.id].size() > maxM) {
+            //         std::pop_heap(knng[us.id].begin(), knng[us.id].end());
+            //         knng[us.id].pop_back();
+            //     }
+            // }
         }
 
 
