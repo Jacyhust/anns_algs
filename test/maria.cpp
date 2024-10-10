@@ -100,16 +100,19 @@ int main(int argc, char* argv[])
     //mariaV6 mariaV6(prep.data, parti, L, K);
     //res.push_back(searchFunction(mariaV6, qs, prep));
 
+    // lsh::srp srp(prep.data, parti.EachParti, index_fold + argvStr[2] + "_srp", prep.data.N, prep.data.dim, L, K, 1);
+    // res.push_back(searchFunction(srp, qs, prep));
+
     mariaV9 mariaV9(prep.data, prep.SquareLen, index_fold + argvStr[2], parti, L, K);
     res.push_back(searchFunction(mariaV9, qs, prep));
 
-    mariaV8 mariaV8(prep.data, prep.SquareLen, index_fold + argvStr[2], parti, L, K);
-    res.push_back(searchFunction(mariaV8, qs, prep));
+    // mariaV8 mariaV8(prep.data, prep.SquareLen, index_fold + argvStr[2], parti, L, K);
+    // res.push_back(searchFunction(mariaV8, qs, prep));
 
 
 
 
-    LiteMARIA lm(prep.data, index_fold + argvStr[2] + ".mariaV8",
+    LiteMARIA lm(prep.data, index_fold + argvStr[2] + ".mariaV9",
         index_fold + argvStr[2] + ".srp", parti);
     res.push_back(searchFunction(lm, qs, prep));
     res.push_back(searchFunctionFn(lm, qs, prep, 1));
@@ -117,7 +120,7 @@ int main(int argc, char* argv[])
     res.push_back(searchFunctionFn(lm, qs, prep, 3));
     //res.push_back(searchFunctionFn(lm, qs, prep, 4));
     res.push_back(searchFunctionFn(lm, qs, prep, 6));
-    //res.push_back(searchFunctionFn(lm, qs, prep, 2));
+    res.push_back(searchFunctionFn(lm, qs, prep, 2));
     saveAndShow(c, k_, dataset, res);
 
     return 0;

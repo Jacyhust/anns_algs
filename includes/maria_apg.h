@@ -20,6 +20,7 @@ class mariaV9
     lsh::srp* srp = nullptr;
     rnnd::rnn_para para;
     int* link_lists = nullptr;
+    std::vector<int> tan_edge_size;
     Data data;
     std::atomic<size_t> cost{ 0 };
     int width = 20;
@@ -68,7 +69,7 @@ class mariaV9
         para.T2 = 4;
 
         lsh::timer timer;
-        if (1 || !exists_test(index_file))
+        if (REBUILT || !exists_test(index_file))
         {
             std::cout << "MARIAV9 Building ..." << "  seconds.\n";
             float mem = (float)getCurrentRSS() / (1024 * 1024);
@@ -87,9 +88,9 @@ class mariaV9
             // in.close();
             srp = new lsh::srp(data, parti.EachParti, index_srp, data.N, data.dim);
             data = data_;
-            std::cout << "Loading index from " << file << ":\n";
+            std::cout << "Loading index from " << index_file << ":\n";
             float mem = (float)getCurrentRSS() / (1024 * 1024);
-            loadIndex(file);
+            loadIndex(index_file);
             float memf = (float)getCurrentRSS() / (1024 * 1024);
             std::cout << "Actual memory usage: " << memf - mem << " Mb \n";
         }
@@ -427,6 +428,54 @@ class mariaV9
     }
 
     // np1<np2
+    void interConnection(block_pairs& bp)
+    {
+        std::vector<std::vector<Res>> knns;
+        srp->kjoin(knns, parti.EachParti[bp.block1_id], bp.block1_id,
+            parti.EachParti[bp.block2_id], bp.block2_id, bp.S, bp.S);
+
+        //auto& knng1 = knngs[bp.block1_id];
+        bp.normal_edges.resize(parti.EachParti[bp.block2_id].size());
+        // std::vector<int> visited(knng2.size(), -1);
+#pragma omp parallel for schedule(dynamic)
+        for (int i = 0; i < knns.size(); ++i)
+        {
+            float* q = data[parti.EachParti[bp.block2_id][i]];
+            std::priority_queue<Res> top_candidates, candidate_set;
+            //std::vector<bool> visited(knng1.size(), false);
+            std::unordered_set<int> visited_sets;
+            //knns[i].resize()
+            for (auto& res : knns[i]) {
+                //if (visited[res.id]) continue;
+                if (visited_sets.find(res.id) != visited_sets.end()) continue;
+                visited_sets.emplace(res.id);
+                //visited[res.id] = true;
+                top_candidates.push(res);
+                res.dist *= -1.0f;
+                candidate_set.push(res);
+                for (auto& us : knng[res.id]) {
+                    int u = us.id;
+                    if (visited_sets.find(u) != visited_sets.end()) continue;
+                    visited_sets.emplace(u);
+                    float dist = cal_inner_product(q, data[parti.EachParti[bp.block1_id][u]], dim);
+                    candidate_set.emplace(u, dist);
+                    top_candidates.emplace(u, -dist);
+                    if (top_candidates.size() > bp.S) top_candidates.pop();
+                }
+            }
+
+            bp.normal_edges[i].reserve(top_candidates.size());
+            for (int j = 0; j < top_candidates.size(); ++j)
+            {
+                auto& top = top_candidates.top();
+                bp.normal_edges[i].push_back(top.id);
+                top_candidates.pop();
+            }
+        }
+    }
+
+
+    // np1<np2
     void interConnection1(block_pairs& bp)
     {
         std::vector<std::vector<Res>> knns;
@@ -454,8 +503,8 @@ class mariaV9
                 //candidate_set.push(res);
                 for (auto& us : knng[res.id]) {
                     int u = us.id;
-                    if (visited_sets.find(res.id) != visited_sets.end()) continue;
-                    visited_sets.emplace(res.id);
+                    if (visited_sets.find(u) != visited_sets.end()) continue;
+                    visited_sets.emplace(u);
                     float dist = cal_inner_product(q, data[parti.EachParti[bp.block1_id][u]], dim);
                     //candidate_set.emplace(u, dist);
                     top_candidates.emplace(u, -dist);
@@ -515,6 +564,62 @@ class mariaV9
         q->cost += cost;
     }
 
+    void searchInKnng_new1(queryN* q, int start, int ef)
+    {
+        std::priority_queue<Res> candidate_set;
+        auto& top_candidates = q->top_candidates;
+        std::vector<bool>& visited = q->visited;
+        visited.resize(data.N, false);
+        int efS = q->k + ef;
+        //efS = 180;
+
+        //int ep = 0;
+        int ep = start;
+
+        float dist = cal_inner_product(q->queryPoint, data[ep], data.dim);
+        visited[ep] = true;
+        q->cost++;
+        candidate_set.emplace(ep, dist);
+        top_candidates.emplace(ep, -dist);
+
+
+        while (!candidate_set.empty())
+        {
+            auto top = candidate_set.top();
+            candidate_set.pop();
+            if (-top.dist > top_candidates.top().dist) break;
+            int* v = (link_lists + size_per_point * top.id);
+            //int size = *((int*)(v + 3));
+            int* links = (v + 4);
+            int size = tan_edge_size[top.id];
+            //if (size > maxM) size = maxM;
+            for (int i = 0; i < size; ++i) {
+                auto& u = links[i];
+                if (visited[u]) continue;
+                visited[u] = true;
+                float dist = cal_inner_product(q->queryPoint, data[u], data.dim);
+                q->cost++;
+                candidate_set.emplace(u, dist);
+                top_candidates.emplace(u, -dist);
+                if (top_candidates.size() > efS)
+                    top_candidates.pop();
+            }
+        }
+
+        while (top_candidates.size() > q->k)
+            top_candidates.pop();
+
+        // q->res.clear();
+        // q->res.reserve(top_candidates.size());
+        // while (!top_candidates.empty())
+        // {
+        //     auto top = top_candidates.top();
+        //     q->res.emplace_back(top.id, -top.dist);
+        //     top_candidates.pop();
+        // }
+    }
+
+
     void knn(queryN* q)
     {
         lsh::timer timer;
@@ -523,8 +628,8 @@ class mariaV9
         int ef = 180;
         for (int i = parti.numChunks - 1; i >= 0; --i)
         {
-            if ((!q->top_candidates.empty()) && (-(q->top_candidates.top().dist)) >
-                q->norm * sqrt(parti.MaxLen[i]))
+            if ((q->top_candidates.size() >= q->k) && (-(q->top_candidates.top().dist)) >
+                sqrt(parti.MaxLen[i]))
                 break;
 
             if (parti.EachParti[i].size() < 400)
@@ -548,7 +653,9 @@ class mariaV9
             // continue;
             //auto& knng = tangential_lists;
 
-            searchInKnng_new(knng, q, parti.EachParti[i][0], ef);
+            //searchInKnng_new(knng, q, parti.EachParti[i][0], ef);
+
+            searchInKnng_new1(q, parti.EachParti[i][0], 0);
 
             // break;
         }
@@ -603,6 +710,7 @@ class mariaV9
             delete[] data.base;
         lsh::timer timer;
         link_lists = new int[size_per_point * N];
+        tan_edge_size.resize(N);
         for (int i = 0;i < N;++i) {
             int* v = link_lists + size_per_point * i;
             //memcpy((void*)(v), (void*)(srp->hashvals[i].data()), sizeof(uint64_t));//v->hashval has the same address with v
@@ -624,6 +732,7 @@ class mariaV9
                 links[(v[3])] = knng[i][j].id;
                 v[3] = v[3] + 1;
             }
+            tan_edge_size[i] = v[3];
         }
         std::cout << "TANGEN  TIME: " << timer.elapsed() << "s." << std::endl;
         timer.restart();
@@ -661,6 +770,8 @@ class mariaV9
         out.write((char*)(&size_per_point), sizeof(size_t));
         out.write((char*)(link_lists), sizeof(int) * size_per_point * N);
 
+        out.write((char*)(tan_edge_size.data()), sizeof(int) * N);
+
         float mem = size_per_point * N * 4;
         mem /= (1 << 30);
         std::cout << "size per p : " << size_per_point << std::endl;
@@ -679,6 +790,9 @@ class mariaV9
         in.read((char*)(&size_per_point), sizeof(size_t));
         link_lists = new int[size_per_point * N];
         in.read((char*)(link_lists), sizeof(int) * size_per_point * N);
+
+        tan_edge_size.resize(N);
+        in.read((char*)(tan_edge_size.data()), sizeof(int) * N);
     }
 
     void showInfo()
