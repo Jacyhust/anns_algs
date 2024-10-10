@@ -69,6 +69,7 @@ namespace lsh
 		int K = 0;
 		float indexing_time = 0.0f;
 		public:
+		const std::string alg_name = "srp";
 		//std::vector<std::vector<uint16_t>> hashvals;
 		//std::vector<uint16_t[4]> hashvals;
 
@@ -98,7 +99,7 @@ namespace lsh
 
 			//std::ifstream in(index_file, std::ios::binary);
 			lsh::timer timer;
-			if (!(isbuilt && exists_test(index_file))) {
+			if (!(!REBUILT && exists_test(index_file))) {
 				float mem = (float)getCurrentRSS() / (1024 * 1024);
 				buildIndex();
 				float memf = (float)getCurrentRSS() / (1024 * 1024);
@@ -780,7 +781,103 @@ namespace lsh
 			}
 		}
 
-		void knn(queryN*& q) {
+		void knn(queryN* q) {
+			lsh::timer timer;
+			//int np = part_map.size() - 1;
+			int cnt = 0;
+			int ub = 200;
+			std::vector<bool>& visited = q->visited;
+			visited.resize(data.N);
+
+			//std::cerr << "here!" << std::endl;
+
+			calQHash(q);
+
+			for (int j = part_map.size() - 1; j >= 0; --j) {
+				int size = part_map[j].size();
+				if (part_map[j].size() < 256) {
+					for (auto& u : part_map[j]) {
+						visited[u] = true;
+						q->top_candidates.emplace(u, calInnerProductReverse(q->queryPoint, data[u], data.dim));
+						if (q->top_candidates.size() > q->k) {
+							q->top_candidates.pop();
+						}
+					}
+
+					continue;
+				}
+
+				ub = 0.9 * size;
+				int num_candidates = 0;
+				uint32_t diff = 1;
+				int lpos[4];
+				int rpos[4];
+				uint16_t lval[4], rval[4];
+				for (int i = 0;i < L;++i) {
+					auto& table = hash_tables[i + j * L];
+					//rpos[i] = std::upper_bound(table.begin(), table.end(), srpPair(-1, q->srpval[i])) - table.begin();
+					rpos[i] = std::distance(table.begin(), std::upper_bound(table.begin(), table.end(), srpPair(-1, q->srpval[i])));
+					lpos[i] = rpos[i] - 1;
+					while (lpos[i] >= 0 && table[lpos[i]].val >= q->srpval[i]) {
+						lpos[i]--;
+					}
+					num_candidates += rpos[i] - lpos[i] - 1;
+				}
+
+				while (num_candidates < ub) {
+					num_candidates = 0;
+					diff *= 2;
+					for (int i = 0;i < L;++i) {
+						auto& table = hash_tables[i + j * L];
+						lval[i] = q->srpval[i] / diff * diff;
+						rval[i] = lval[i] + diff;
+						while (lpos[i] >= 0 && table[lpos[i]].val >= lval[i]) {
+							lpos[i]--;
+						}
+
+						while (rpos[i] < size && table[rpos[i]].val <= rval[i]) {
+							rpos[i]++;
+						}
+						num_candidates += rpos[i] - lpos[i] - 1;
+					}
+
+				}
+
+				for (int i = 0;i < L;++i) {
+					auto& table = hash_tables[i + j * L];
+					for (int l = lpos[i] + 1;l < rpos[i];++l) {
+						int u = part_map[j][table[l].id];
+						if (visited[u]) continue;
+						visited[u] = true;
+						q->top_candidates.emplace(u, calInnerProductReverse(q->queryPoint, data[u], data.dim));
+						cnt++;
+						//if (cnt > ub) break;
+						if (q->top_candidates.size() > q->k) {
+							q->top_candidates.pop();
+						}
+					}
+				}
+
+				q->cost += cnt;
+
+				while (q->top_candidates.size()) {
+					q->res.emplace_back(q->top_candidates.top());
+					q->top_candidates.pop();
+				}
+				std::reverse(q->res.begin(), q->res.end());
+				// if ((!q->top_candidates.empty()) && (-(q->top_candidates.top().dist)) >
+				// 	q->norm * sqrt(parti.MaxLen[i]))
+				// 	break;
+			}
+
+
+
+
+
+
+		}
+
+		void knnInner(queryN* q) {
 			int np = part_map.size() - 1;
 			int cnt = 0;
 			int ub = 200;

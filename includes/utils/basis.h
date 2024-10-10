@@ -25,6 +25,7 @@
 
  //#define COUNT_CC
 //#define COUNT_PD
+#define REBUILT 1
 
 struct Res//the result of knns
 {

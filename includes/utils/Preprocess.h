@@ -408,6 +408,7 @@ class Partition
 
 	Partition(float c_, Preprocess& prep) {
 		ratio = 0.95;
+		//ratio = 0.0001;
 		float c0_ = 1.5f;
 
 		make_chunks_maria(prep);

@@ -6,6 +6,7 @@
 #include "RNNDescent.h"
 #include "rnnd.h"
 #include <unordered_set>
+
 //// My class for store the information of a vertex
 //// Do not directly define a vectex object
 //// It is only for quickly computing the address shifting and increasing the readability
@@ -493,14 +494,14 @@ class mariaV8
 		para.T1 = 4;
 		para.T2 = 4;
 
-		index_file = file + ".mariaV9";
+		index_file = file + ".mariaV8";
 		index_srp = file + ".srp";
 		// para.S = 2;
 		// para.T1 = 1;
 		// para.T2 = 1;
 
 		lsh::timer timer;
-		if (1 || !exists_test(index_file))
+		if (REBUILT || !exists_test(index_file))
 		{
 			float mem = (float)getCurrentRSS() / (1024 * 1024);
 			buildIndex();
@@ -518,9 +519,9 @@ class mariaV8
 			// in.close();
 			srp = new lsh::srp(data, parti.EachParti, file + "_srp", data.N, data.dim);
 			data = data_;
-			std::cout << "Loading index from " << file << ":\n";
+			std::cout << "Loading index from " << index_file << ":\n";
 			float mem = (float)getCurrentRSS() / (1024 * 1024);
-			loadIndex(file);
+			loadIndex(index_file);
 			float memf = (float)getCurrentRSS() / (1024 * 1024);
 			std::cout << "Actual memory usage: " << memf - mem << " Mb \n";
 		}
@@ -788,7 +789,7 @@ class mariaV8
 		for (int i = parti.numChunks - 1; i >= 0; --i)
 		{
 			if ((!q->top_candidates.empty()) && (-(q->top_candidates.top().dist)) >
-				q->norm * sqrt(parti.MaxLen[i]))
+				q->norm * parti.MaxLen[i])
 				break;
 
 			if (parti.EachParti[i].size() < 400)
@@ -1093,7 +1094,7 @@ class LiteMARIA
 		std::priority_queue<Res> top_candidates, candidate_set;
 		std::vector<bool>& visited = q->visited;
 		visited.resize(data.N, false);
-		srp->knn(q);
+		srp->knnInner(q);
 		while (top_candidates.size() > q->k)
 			top_candidates.pop();
 
