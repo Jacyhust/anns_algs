@@ -755,7 +755,8 @@ class mariaV9
                 {
                     // v->links[v->size++] = ids2[u];
 
-                    links[(*size)++] = ids1[u];
+                    //links[(*size)++] = ids1[u];
+                    links[(*size)++] = u;
                     // auto& size = *((int*)(v + 12));
                     // links[size++] = ids2[u];
                 }
